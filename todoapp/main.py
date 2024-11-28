@@ -1,6 +1,8 @@
 from fastapi import FastAPI
+from todoapp.api.routers import tasks
 
 app = FastAPI()
+app.include_router(tasks.router)
 
 
 @app.get("/")
