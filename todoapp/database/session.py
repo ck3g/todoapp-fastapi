@@ -10,4 +10,4 @@ def get_session():
         yield session
 
 
-SessionDep = Annotated(Session, Depends(get_session))
+SessionDep = Annotated[Session, Depends(get_session)]
