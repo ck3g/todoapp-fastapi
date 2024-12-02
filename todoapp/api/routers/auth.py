@@ -2,10 +2,14 @@ from fastapi import APIRouter, status
 from pydantic import BaseModel, Field, model_validator
 from pydantic_core import PydanticCustomError
 
+from todoapp.database.session import SessionDep
+from todoapp.models.user import User
+
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 class RegisterResponse(BaseModel):
+    id: int
     email: str
     username: str
 
@@ -31,8 +35,14 @@ class RegisterRequest(BaseModel):
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
-async def register_user(request: RegisterRequest):
+async def register_user(request: RegisterRequest, session: SessionDep):
     """Creates and new user with provided credentials"""
     username = request.email.split("@")[0]
-    response = RegisterResponse(email=request.email, username=username)
+    hashed_password = request.password  # TODO: hash later
+
+    user = User(email=request.email, username=username, hashed_password=hashed_password)
+    session.add(user)
+    session.commit()
+
+    response = RegisterResponse(id=user.id, email=user.email, username=user.username)
     return {"msg": "User successfully created", "user": response}

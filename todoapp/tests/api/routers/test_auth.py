@@ -1,11 +1,12 @@
 from fastapi.testclient import TestClient
 from fastapi import status
-from sqlmodel import SQLModel, Session, create_engine
+from sqlmodel import SQLModel, Session, create_engine, select
 from sqlmodel.pool import StaticPool
 import pytest
 
 from todoapp.main import app
 from todoapp.database.session import get_session
+from todoapp.models.user import User
 
 
 @pytest.fixture(name="session")
@@ -22,6 +23,8 @@ def session_fixture():
     with Session(engine) as session:
         yield session
 
+    SQLModel.metadata.drop_all(engine)
+
 
 @pytest.fixture(name="client")
 def client_fixture(session: Session):
@@ -35,7 +38,7 @@ def client_fixture(session: Session):
     app.dependency_overrides.clear()
 
 
-def test_auth_register_successful_response(client: TestClient):
+def test_auth_register_successful_response(session: Session, client: TestClient):
     response = client.post(
         "/auth/register",
         json={
@@ -44,10 +47,17 @@ def test_auth_register_successful_response(client: TestClient):
             "password_confirmation": "pwd123",
         },
     )
+
+    user = session.exec(select(User)).first()
+    assert user is not None
+    assert user.id is not None
+    assert user.email == "user@example.com"
+    assert user.username == "user"
+
     assert response.status_code == status.HTTP_201_CREATED
     assert response.json() == {
         "msg": "User successfully created",
-        "user": {"email": "user@example.com", "username": "user"},
+        "user": {"id": user.id, "email": "user@example.com", "username": "user"},
     }
 
 
