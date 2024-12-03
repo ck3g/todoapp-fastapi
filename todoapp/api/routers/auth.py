@@ -1,14 +1,12 @@
 from fastapi import APIRouter, status
-from passlib.context import CryptContext
 from pydantic import BaseModel, Field, model_validator
 from pydantic_core import PydanticCustomError
 
 from todoapp.database.session import SessionDep
 from todoapp.models.user import User
+from todoapp.security.password import hash_password
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated=["auto"])
 
 
 class RegisterResponse(BaseModel):
@@ -49,16 +47,3 @@ async def register_user(request: RegisterRequest, session: SessionDep):
 
     response = RegisterResponse(id=user.id, email=user.email, username=user.username)
     return {"msg": "User successfully created", "user": response}
-
-
-def hash_password(password) -> str:
-    """Hashes the password"""
-    return pwd_context.hash(password)
-
-
-def verify_password(password, hashed_password) -> bool:
-    """Return False when password verifycation fails"""
-    try:
-        return pwd_context.verify(password, hashed_password)
-    except ValueError:
-        return False

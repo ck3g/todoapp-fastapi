@@ -4,10 +4,10 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine, select
 from sqlmodel.pool import StaticPool
 
-from todoapp.api.routers.auth import verify_password
 from todoapp.database.session import get_session
 from todoapp.main import app
 from todoapp.models.user import User
+from todoapp.security.password import verify_password
 
 
 @pytest.fixture(name="session")
