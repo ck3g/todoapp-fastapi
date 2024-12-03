@@ -1,10 +1,11 @@
-from fastapi import APIRouter, status
+from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field, model_validator
 from pydantic_core import PydanticCustomError
+from sqlmodel import select
 
 from todoapp.database.session import SessionDep
 from todoapp.models.user import User
-from todoapp.security.password import hash_password
+from todoapp.security.password import hash_password, verify_password
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -47,3 +48,19 @@ async def register_user(request: RegisterRequest, session: SessionDep):
 
     response = RegisterResponse(id=user.id, email=user.email, username=user.username)
     return {"msg": "User successfully created", "user": response}
+
+
+class TokenRequest(BaseModel):
+    email: str
+    password: str
+
+
+@router.post("/token", status_code=status.HTTP_200_OK)
+async def create_token(request: TokenRequest, session: SessionDep):
+    user = session.exec(select(User).where(User.email == request.email)).first()
+    if user is None or not verify_password(request.password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password"
+        )
+
+    return {"token": "fake-token"}

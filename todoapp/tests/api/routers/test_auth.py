@@ -7,7 +7,7 @@ from sqlmodel.pool import StaticPool
 from todoapp.database.session import get_session
 from todoapp.main import app
 from todoapp.models.user import User
-from todoapp.security.password import verify_password
+from todoapp.security.password import hash_password, verify_password
 
 
 @pytest.fixture(name="session")
@@ -117,3 +117,40 @@ def test_auth_register_validation_errors(
     for err in json_response["detail"]:
         assert expected_type == err["type"]
         assert expected_msg == err["msg"]
+
+
+@pytest.mark.parametrize(
+    "email, password, persisted_user, expect_error",
+    [
+        ("user@example.com", "pwd123", True, False),
+        ("user@example.com", "wrong-pwd", True, True),
+        ("user@example.com", "pwd123", False, True),
+    ],
+    ids=["valid credentials", "invalid credentials", "no user"],
+)
+def test_auth_create_token(
+    client: TestClient,
+    session: Session,
+    email,
+    password,
+    persisted_user,
+    expect_error,
+):
+    if persisted_user:
+        # Create user in DB
+        user = User(
+            email="user@example.com",
+            username="user",
+            hashed_password=hash_password("pwd123"),
+        )
+        session.add(user)
+        session.commit()
+
+    response = client.post("/auth/token", json={"email": email, "password": password})
+
+    if expect_error:
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        assert response.json() == {"detail": "Invalid email or password"}
+    else:
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json() == {"token": "fake-token"}
