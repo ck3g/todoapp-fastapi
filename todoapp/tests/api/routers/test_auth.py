@@ -1,11 +1,12 @@
-from fastapi.testclient import TestClient
-from fastapi import status
-from sqlmodel import SQLModel, Session, create_engine, select
-from sqlmodel.pool import StaticPool
 import pytest
+from fastapi import status
+from fastapi.testclient import TestClient
+from sqlmodel import Session, SQLModel, create_engine, select
+from sqlmodel.pool import StaticPool
 
-from todoapp.main import app
+from todoapp.api.routers.auth import verify_password
 from todoapp.database.session import get_session
+from todoapp.main import app
 from todoapp.models.user import User
 
 
@@ -53,6 +54,9 @@ def test_auth_register_successful_response(session: Session, client: TestClient)
     assert user.id is not None
     assert user.email == "user@example.com"
     assert user.username == "user"
+    assert verify_password(
+        "pwd123", user.hashed_password
+    ), "cannot verify hashed password"
 
     assert response.status_code == status.HTTP_201_CREATED
     assert response.json() == {
