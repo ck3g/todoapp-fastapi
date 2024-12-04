@@ -1,7 +1,6 @@
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
-from jose import jwt
 from sqlmodel import Session, SQLModel, create_engine, select
 from sqlmodel.pool import StaticPool
 
@@ -68,11 +67,10 @@ def test_auth_register_successful_response(session: Session, client: TestClient)
         "pwd123", user.hashed_password
     ), "cannot verify hashed password"
 
+    json_response = response.json()
     assert response.status_code == status.HTTP_201_CREATED
-    assert response.json() == {
-        "msg": "User successfully created",
-        "user": {"id": user.id, "email": "user@example.com", "username": "user"},
-    }
+    assert json_response["msg"] == "User successfully created"
+    assert is_valid_jwt_token(user, json_response["token"])
 
 
 @pytest.mark.parametrize(

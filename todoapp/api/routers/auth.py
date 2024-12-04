@@ -1,5 +1,3 @@
-from datetime import datetime, timedelta, timezone
-
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field, model_validator
 from pydantic_core import PydanticCustomError
@@ -11,12 +9,6 @@ from todoapp.security.password import hash_password, verify_password
 from todoapp.security.token import encode_token
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-
-
-class RegisterResponse(BaseModel):
-    id: int
-    email: str
-    username: str
 
 
 class RegisterRequest(BaseModel):
@@ -49,8 +41,7 @@ async def register_user(request: RegisterRequest, session: SessionDep):
     session.add(user)
     session.commit()
 
-    response = RegisterResponse(id=user.id, email=user.email, username=user.username)
-    return {"msg": "User successfully created", "user": response}
+    return {"msg": "User successfully created", "token": encode_token(user)}
 
 
 class TokenRequest(BaseModel):
