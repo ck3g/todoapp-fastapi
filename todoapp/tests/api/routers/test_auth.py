@@ -5,11 +5,11 @@ from jose import jwt
 from sqlmodel import Session, SQLModel, create_engine, select
 from sqlmodel.pool import StaticPool
 
-from todoapp.api.routers.auth import ALGORITHM, SECRET_KEY
 from todoapp.database.session import get_session
 from todoapp.main import app
 from todoapp.models.user import User
 from todoapp.security.password import hash_password, verify_password
+from todoapp.security.token import decode_token
 
 
 @pytest.fixture(name="session")
@@ -39,6 +39,14 @@ def client_fixture(session: Session):
     client = TestClient(app)
     yield client
     app.dependency_overrides.clear()
+
+
+def is_valid_jwt_token(user: User, token: str) -> bool:
+    if token is None:
+        return False
+
+    token_data = decode_token(token)
+    return token_data["sub"] == user.email and token_data["user_id"] == user.id
 
 
 def test_auth_register_successful_response(session: Session, client: TestClient):
@@ -156,10 +164,4 @@ def test_auth_create_token(
     else:
         assert response.status_code == status.HTTP_200_OK
         json_response = response.json()
-        assert not json_response["token"] is None
-
-        token_data = jwt.decode(
-            json_response["token"], SECRET_KEY, algorithms=[ALGORITHM]
-        )
-        assert token_data["sub"] == user.email
-        assert token_data["user_id"] == user.id
+        assert is_valid_jwt_token(user, json_response["token"])
