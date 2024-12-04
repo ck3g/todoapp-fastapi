@@ -1,9 +1,11 @@
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
+from jose import jwt
 from sqlmodel import Session, SQLModel, create_engine, select
 from sqlmodel.pool import StaticPool
 
+from todoapp.api.routers.auth import ALGORITHM, SECRET_KEY
 from todoapp.database.session import get_session
 from todoapp.main import app
 from todoapp.models.user import User
@@ -153,4 +155,11 @@ def test_auth_create_token(
         assert response.json() == {"detail": "Invalid email or password"}
     else:
         assert response.status_code == status.HTTP_200_OK
-        assert response.json() == {"token": "fake-token"}
+        json_response = response.json()
+        assert not json_response["token"] is None
+
+        token_data = jwt.decode(
+            json_response["token"], SECRET_KEY, algorithms=[ALGORITHM]
+        )
+        assert token_data["sub"] == user.email
+        assert token_data["user_id"] == user.id

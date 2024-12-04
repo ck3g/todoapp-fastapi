@@ -1,4 +1,7 @@
+from datetime import datetime, timedelta, timezone
+
 from fastapi import APIRouter, HTTPException, status
+from jose import jwt
 from pydantic import BaseModel, Field, model_validator
 from pydantic_core import PydanticCustomError
 from sqlmodel import select
@@ -8,6 +11,10 @@ from todoapp.models.user import User
 from todoapp.security.password import hash_password, verify_password
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+# also can generate with `openssl rand -hex 32`
+SECRET_KEY = "super-secret-key"  # TODO: move to .env
+ALGORITHM = "HS256"
 
 
 class RegisterResponse(BaseModel):
@@ -63,4 +70,8 @@ async def create_token(request: TokenRequest, session: SessionDep):
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password"
         )
 
-    return {"token": "fake-token"}
+    expires = datetime.now(timezone.utc) + timedelta(minutes=30)
+    encode = {"sub": user.email, "user_id": user.id, "exp": expires}
+    token = jwt.encode(encode, SECRET_KEY, algorithm=ALGORITHM)
+
+    return {"token": token}
