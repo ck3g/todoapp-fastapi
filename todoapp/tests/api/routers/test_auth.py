@@ -69,8 +69,8 @@ def test_auth_register_successful_response(session: Session, client: TestClient)
 
     json_response = response.json()
     assert response.status_code == status.HTTP_201_CREATED
-    assert json_response["msg"] == "User successfully created"
-    assert is_valid_jwt_token(user, json_response["token"])
+    assert json_response["token_type"] == "bearer"
+    assert is_valid_jwt_token(user, json_response["access_token"])
 
 
 @pytest.mark.parametrize(
@@ -154,7 +154,11 @@ def test_auth_create_token(
         session.add(user)
         session.commit()
 
-    response = client.post("/auth/token", json={"email": email, "password": password})
+    response = client.post(
+        "/auth/token",
+        data={"username": email, "password": password},
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+    )
 
     if expect_error:
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
@@ -162,4 +166,5 @@ def test_auth_create_token(
     else:
         assert response.status_code == status.HTTP_200_OK
         json_response = response.json()
-        assert is_valid_jwt_token(user, json_response["token"])
+        assert json_response["token_type"] == "bearer"
+        assert is_valid_jwt_token(user, json_response["access_token"])

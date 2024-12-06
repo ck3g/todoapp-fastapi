@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
-from jose import jwt
+from jose import JWTError, jwt
 
 from todoapp.models.user import User
 
@@ -18,4 +18,7 @@ def encode_token(user: User, expires_delta=timedelta(minutes=30)) -> str:
 
 def decode_token(token: str):
     """Decodes JWT token"""
-    return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    try:
+        return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    except JWTError:
+        return {}

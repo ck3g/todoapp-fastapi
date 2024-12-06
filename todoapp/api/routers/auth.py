@@ -1,4 +1,7 @@
-from fastapi import APIRouter, HTTPException, status
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel, Field, model_validator
 from pydantic_core import PydanticCustomError
 from sqlmodel import select
@@ -37,24 +40,28 @@ async def register_user(request: RegisterRequest, session: SessionDep):
     username = request.email.split("@")[0]
     hashed_password = hash_password(request.password)
 
+    # TODO: check whether user with this email and username already exists
+    # TODO: username can overlap here, when user has the same email prefix. For example:
+    # user@example.com and user@another-example.com
     user = User(email=request.email, username=username, hashed_password=hashed_password)
     session.add(user)
     session.commit()
 
-    return {"msg": "User successfully created", "token": encode_token(user)}
-
-
-class TokenRequest(BaseModel):
-    email: str
-    password: str
+    return {"access_token": encode_token(user), "token_type": "bearer"}
 
 
 @router.post("/token", status_code=status.HTTP_200_OK)
-async def create_token(request: TokenRequest, session: SessionDep):
-    user = session.exec(select(User).where(User.email == request.email)).first()
-    if user is None or not verify_password(request.password, user.hashed_password):
+async def create_token(
+    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+    session: SessionDep,
+):
+    email = form_data.username
+    password = form_data.password
+    user = session.exec(select(User).where(User.email == email)).first()
+
+    if user is None or not verify_password(password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password"
         )
 
-    return {"token": encode_token(user)}
+    return {"access_token": encode_token(user), "token_type": "bearer"}
