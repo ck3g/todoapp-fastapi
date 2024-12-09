@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine, select
 from sqlmodel.pool import StaticPool
 
-from todoapp.api.routers.auth import get_current_user, oauth2_scheme
+from todoapp.api.routers.auth import get_current_user
 from todoapp.database.session import get_session
 from todoapp.main import app
 from todoapp.models.user import User
@@ -39,6 +39,22 @@ def client_fixture(session: Session):
     client = TestClient(app)
     yield client
     app.dependency_overrides.clear()
+
+
+@pytest.fixture(name="create_user", scope="function")
+def create_user_fixture(session: Session):
+    def _create_user(email="user@example.com", username="user", password="pwd123"):
+        user = User(
+            email=email,
+            username=username,
+            hashed_password=hash_password(password),
+        )
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+        return user
+
+    yield _create_user
 
 
 def is_valid_jwt_token(user: User, token: str) -> bool:
@@ -139,21 +155,14 @@ def test_auth_register_validation_errors(
 )
 def test_auth_create_token(
     client: TestClient,
-    session: Session,
+    create_user: User,
     email,
     password,
     persisted_user,
     expect_error,
 ):
     if persisted_user:
-        # Create user in DB
-        user = User(
-            email="user@example.com",
-            username="user",
-            hashed_password=hash_password("pwd123"),
-        )
-        session.add(user)
-        session.commit()
+        user = create_user()
 
     response = client.post(
         "/auth/token",
@@ -168,19 +177,15 @@ def test_auth_create_token(
         assert response.status_code == status.HTTP_200_OK
         json_response = response.json()
         assert json_response["token_type"] == "bearer"
-        assert is_valid_jwt_token(user, json_response["access_token"])
+        if persisted_user:
+            assert is_valid_jwt_token(user, json_response["access_token"])
 
 
 @pytest.mark.asyncio
-async def test_get_current_user_valid_token_and_existing_user(session: Session):
-    user = User(
-        email="user1@example.com",
-        username="user1",
-        hashed_password=hash_password("pwd123"),
-    )
-    session.add(user)
-    session.commit()
-
+async def test_get_current_user_valid_token_and_existing_user(
+    session: Session, create_user
+):
+    user = create_user()
     token = encode_token(user)
     result = await get_current_user(token, session)
 
