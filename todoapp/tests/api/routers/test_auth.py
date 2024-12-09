@@ -1,14 +1,15 @@
 import pytest
-from fastapi import status
+from fastapi import HTTPException, status
 from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine, select
 from sqlmodel.pool import StaticPool
 
+from todoapp.api.routers.auth import get_current_user, oauth2_scheme
 from todoapp.database.session import get_session
 from todoapp.main import app
 from todoapp.models.user import User
 from todoapp.security.password import hash_password, verify_password
-from todoapp.security.token import decode_token
+from todoapp.security.token import decode_token, encode_token
 
 
 @pytest.fixture(name="session")
@@ -168,3 +169,37 @@ def test_auth_create_token(
         json_response = response.json()
         assert json_response["token_type"] == "bearer"
         assert is_valid_jwt_token(user, json_response["access_token"])
+
+
+@pytest.mark.asyncio
+async def test_get_current_user_valid_token_and_existing_user(session: Session):
+    user = User(
+        email="user1@example.com",
+        username="user1",
+        hashed_password=hash_password("pwd123"),
+    )
+    session.add(user)
+    session.commit()
+
+    token = encode_token(user)
+    result = await get_current_user(token, session)
+
+    assert result == user
+
+
+@pytest.mark.asyncio
+async def test_get_current_user_invalid_token(session: Session):
+    with pytest.raises(HTTPException) as exc_info:
+        await get_current_user("invalid_token", session)
+
+    assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
+    assert exc_info.value.detail == "Could not validate credentials"
+
+
+@pytest.mark.asyncio
+async def test_get_current_user_valid_token_user_does_not_exist(session: Session):
+    non_peristed_user = User(email="user@example.com", user_id=503)
+    token = encode_token(non_peristed_user)
+    result = await get_current_user(token, session)
+
+    assert result is None

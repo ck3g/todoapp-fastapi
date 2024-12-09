@@ -1,7 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel, Field, model_validator
 from pydantic_core import PydanticCustomError
 from sqlmodel import select
@@ -9,9 +9,26 @@ from sqlmodel import select
 from todoapp.database.session import SessionDep
 from todoapp.models.user import User
 from todoapp.security.password import hash_password, verify_password
-from todoapp.security.token import encode_token
+from todoapp.security.token import decode_token, encode_token
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
+
+
+async def get_current_user(
+    token: Annotated[str, Depends(oauth2_scheme)], session: SessionDep
+):
+    payload = decode_token(token)
+    if payload == {}:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+        )
+    return session.get(User, payload.get("user_id"))
+
+
+UserDependency = Annotated[User, Depends(get_current_user)]
 
 
 class RegisterRequest(BaseModel):
