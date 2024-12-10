@@ -159,13 +159,16 @@ def test_auth_register_validation_errors(
         assert expected_msg == err["msg"]
 
 
-def test_auth_register_when_user_email_already_exists(client: TestClient, create_user):
+@pytest.mark.parametrize("email", [("user@example.com"), ("USER@EXAMPLE.COM")])
+def test_auth_register_when_user_email_already_exists(
+    client: TestClient, create_user, email
+):
     create_user()
 
     response = client.post(
         "/auth/register",
         json={
-            "email": "user@example.com",
+            "email": email,
             "username": "user",
             "password": "password",
             "password_confirmation": "password",
@@ -176,8 +179,9 @@ def test_auth_register_when_user_email_already_exists(client: TestClient, create
     assert response.json() == {"detail": "A user with this email already exists."}
 
 
+@pytest.mark.parametrize("username", [("username"), ("USERNAME")])
 def test_auth_register_when_user_username_already_exists(
-    client: TestClient, create_user
+    client: TestClient, create_user, username
 ):
     create_user()
 
@@ -185,7 +189,7 @@ def test_auth_register_when_user_username_already_exists(
         "/auth/register",
         json={
             "email": "newuser@example.com",
-            "username": "username",
+            "username": username,
             "password": "password",
             "password_confirmation": "password",
         },
@@ -200,12 +204,16 @@ def test_auth_register_when_user_username_already_exists(
     [
         ("user@example.com", "pwd123", True, False),
         ("username", "pwd123", True, False),
+        ("USER@example.com", "pwd123", True, False),
+        ("USERNAME", "pwd123", True, False),
         ("user@example.com", "wrong-pwd", True, True),
         ("user@example.com", "pwd123", False, True),
     ],
     ids=[
         "authenticate by email",
         "authenticate by username",
+        "authenticate by email case insensitive",
+        "authenticate by username case insensitive",
         "invalid credentials",
         "no user",
     ],

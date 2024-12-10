@@ -59,13 +59,23 @@ async def register_user(request: RegisterRequest, session: SessionDep):
     username = request.username
     hashed_password = hash_password(request.password)
 
-    if session.exec(select(User).where(User.email == email)).first() is not None:
+    if (
+        session.exec(
+            select(User).where(func.lower(User.email) == func.lower(email))
+        ).first()
+        is not None
+    ):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="A user with this email already exists.",
         )
 
-    if session.exec(select(User).where(User.username == username)).first() is not None:
+    if (
+        session.exec(
+            select(User).where(func.lower(User.username) == func.lower(username))
+        ).first()
+        is not None
+    ):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="A user with this username already exists.",
@@ -87,7 +97,10 @@ async def create_token(
     password = form_data.password
     user = session.exec(
         select(User).where(
-            or_(User.email == email_or_username, User.username == email_or_username)
+            or_(
+                func.lower(User.email) == func.lower(email_or_username),
+                func.lower(User.username) == func.lower(email_or_username),
+            )
         )
     ).first()
 
