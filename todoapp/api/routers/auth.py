@@ -4,11 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel, Field, model_validator
 from pydantic_core import PydanticCustomError
-from sqlmodel import func, or_, select
 
 from todoapp.database.session import SessionDep
 from todoapp.models.user import User
-from todoapp.security.password import hash_password, verify_password
+from todoapp.security.password import verify_password
 from todoapp.security.token import decode_token, encode_token
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -55,35 +54,24 @@ class RegisterRequest(BaseModel):
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register_user(request: RegisterRequest, session: SessionDep):
     """Creates and new user with provided credentials"""
-    email = request.email
-    username = request.username
-    hashed_password = hash_password(request.password)
-
-    if (
-        session.exec(
-            select(User).where(func.lower(User.email) == func.lower(email))
-        ).first()
-        is not None
-    ):
+    if User.find_by_email(session, request.email) is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="A user with this email already exists.",
         )
 
-    if (
-        session.exec(
-            select(User).where(func.lower(User.username) == func.lower(username))
-        ).first()
-        is not None
-    ):
+    if User.find_by_username(session, request.username) is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="A user with this username already exists.",
         )
 
-    user = User(email=email, username=username, hashed_password=hashed_password)
-    session.add(user)
-    session.commit()
+    user = User.create_by(
+        session,
+        email=request.email,
+        username=request.username,
+        password=request.password,
+    )
 
     return {"access_token": encode_token(user), "token_type": "bearer"}
 
@@ -95,14 +83,7 @@ async def create_token(
 ):
     email_or_username = form_data.username
     password = form_data.password
-    user = session.exec(
-        select(User).where(
-            or_(
-                func.lower(User.email) == func.lower(email_or_username),
-                func.lower(User.username) == func.lower(email_or_username),
-            )
-        )
-    ).first()
+    user = User.find_by_email_or_username(session, email_or_username)
 
     if user is None or not verify_password(password, user.hashed_password):
         raise HTTPException(

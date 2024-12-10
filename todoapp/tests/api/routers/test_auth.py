@@ -8,7 +8,7 @@ from todoapp.api.routers.auth import get_current_user
 from todoapp.database.session import get_session
 from todoapp.main import app
 from todoapp.models.user import User
-from todoapp.security.password import hash_password, verify_password
+from todoapp.security.password import verify_password
 from todoapp.security.token import decode_token, encode_token
 
 
@@ -44,15 +44,12 @@ def client_fixture(session: Session):
 @pytest.fixture(name="create_user", scope="function")
 def create_user_fixture(session: Session):
     def _create_user(email="user@example.com", username="username", password="pwd123"):
-        user = User(
+        return User.create_by(
+            session,
             email=email,
             username=username,
-            hashed_password=hash_password(password),
+            password=password,
         )
-        session.add(user)
-        session.commit()
-        session.refresh(user)
-        return user
 
     yield _create_user
 
