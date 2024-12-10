@@ -196,18 +196,24 @@ def test_auth_register_when_user_username_already_exists(
 
 
 @pytest.mark.parametrize(
-    "email, password, persisted_user, expect_error",
+    "email_or_username, password, persisted_user, expect_error",
     [
         ("user@example.com", "pwd123", True, False),
+        ("username", "pwd123", True, False),
         ("user@example.com", "wrong-pwd", True, True),
         ("user@example.com", "pwd123", False, True),
     ],
-    ids=["valid credentials", "invalid credentials", "no user"],
+    ids=[
+        "authenticate by email",
+        "authenticate by username",
+        "invalid credentials",
+        "no user",
+    ],
 )
 def test_auth_create_token(
     client: TestClient,
     create_user: User,
-    email,
+    email_or_username,
     password,
     persisted_user,
     expect_error,
@@ -217,7 +223,7 @@ def test_auth_create_token(
 
     response = client.post(
         "/auth/token",
-        data={"username": email, "password": password},
+        data={"username": email_or_username, "password": password},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
 

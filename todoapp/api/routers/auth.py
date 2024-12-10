@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel, Field, model_validator
 from pydantic_core import PydanticCustomError
-from sqlmodel import select
+from sqlmodel import func, or_, select
 
 from todoapp.database.session import SessionDep
 from todoapp.models.user import User
@@ -83,9 +83,13 @@ async def create_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     session: SessionDep,
 ):
-    email = form_data.username
+    email_or_username = form_data.username
     password = form_data.password
-    user = session.exec(select(User).where(User.email == email)).first()
+    user = session.exec(
+        select(User).where(
+            or_(User.email == email_or_username, User.username == email_or_username)
+        )
+    ).first()
 
     if user is None or not verify_password(password, user.hashed_password):
         raise HTTPException(
