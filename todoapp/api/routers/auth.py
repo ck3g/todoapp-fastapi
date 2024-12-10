@@ -35,6 +35,7 @@ class RegisterRequest(BaseModel):
     """Create user request form"""
 
     email: str = Field(min_length=3, max_length=255)
+    username: str = Field(min_length=3, max_length=255)
     password: str = Field(min_length=3, max_length=255)
     password_confirmation: str = Field(min_length=3, max_length=255)
 
@@ -55,7 +56,7 @@ class RegisterRequest(BaseModel):
 async def register_user(request: RegisterRequest, session: SessionDep):
     """Creates and new user with provided credentials"""
     email = request.email
-    username = email.split("@")[0]
+    username = request.username
     hashed_password = hash_password(request.password)
 
     if session.exec(select(User).where(User.email == email)).first() is not None:
@@ -63,8 +64,13 @@ async def register_user(request: RegisterRequest, session: SessionDep):
             status_code=status.HTTP_409_CONFLICT,
             detail="A user with this email already exists.",
         )
-    # TODO: username can overlap here, when user has the same email prefix. For example:
-    # user@example.com and user@another-example.com
+
+    if session.exec(select(User).where(User.username == username)).first() is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A user with this username already exists.",
+        )
+
     user = User(email=email, username=username, hashed_password=hashed_password)
     session.add(user)
     session.commit()

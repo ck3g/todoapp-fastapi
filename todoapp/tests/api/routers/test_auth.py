@@ -43,7 +43,7 @@ def client_fixture(session: Session):
 
 @pytest.fixture(name="create_user", scope="function")
 def create_user_fixture(session: Session):
-    def _create_user(email="user@example.com", username="user", password="pwd123"):
+    def _create_user(email="user@example.com", username="username", password="pwd123"):
         user = User(
             email=email,
             username=username,
@@ -70,6 +70,7 @@ def test_auth_register_successful_response(session: Session, client: TestClient)
         "/auth/register",
         json={
             "email": "user@example.com",
+            "username": "username",
             "password": "pwd123",
             "password_confirmation": "pwd123",
         },
@@ -79,7 +80,7 @@ def test_auth_register_successful_response(session: Session, client: TestClient)
     assert user is not None
     assert user.id is not None
     assert user.email == "user@example.com"
-    assert user.username == "user"
+    assert user.username == "username"
     assert verify_password(
         "pwd123", user.hashed_password
     ), "cannot verify hashed password"
@@ -91,10 +92,11 @@ def test_auth_register_successful_response(session: Session, client: TestClient)
 
 
 @pytest.mark.parametrize(
-    "email, password, password_confirmation, expected_type, expected_msg",
+    "email, username, password, password_confirmation, expected_type, expected_msg",
     [
         (
             "e",
+            "username",
             "pass123",
             "pass123",
             "string_too_short",
@@ -102,6 +104,15 @@ def test_auth_register_successful_response(session: Session, client: TestClient)
         ),
         (
             "email@example.com",
+            "u",
+            "pass123",
+            "pass123",
+            "string_too_short",
+            "String should have at least 3 characters",
+        ),
+        (
+            "email@example.com",
+            "username",
             "p",
             "p",
             "string_too_short",
@@ -109,6 +120,7 @@ def test_auth_register_successful_response(session: Session, client: TestClient)
         ),
         (
             "email@example.com",
+            "username",
             "pass123",
             "pass123456",
             "confirmation_error",
@@ -117,6 +129,7 @@ def test_auth_register_successful_response(session: Session, client: TestClient)
     ],
     ids=[
         "email_string_too_short",
+        "username_string_too_short",
         "password_string_too_short",
         "password_and_confirmation_do_not_match",
     ],
@@ -124,6 +137,7 @@ def test_auth_register_successful_response(session: Session, client: TestClient)
 def test_auth_register_validation_errors(
     client: TestClient,
     email,
+    username,
     password,
     password_confirmation,
     expected_type,
@@ -133,6 +147,7 @@ def test_auth_register_validation_errors(
         "/auth/register",
         json={
             "email": email,
+            "username": username,
             "password": password,
             "password_confirmation": password_confirmation,
         },
@@ -144,16 +159,14 @@ def test_auth_register_validation_errors(
         assert expected_msg == err["msg"]
 
 
-def test_auth_register_when_user_already_exists(
-    client: TestClient,
-    create_user,
-):
+def test_auth_register_when_user_email_already_exists(client: TestClient, create_user):
     create_user()
 
     response = client.post(
         "/auth/register",
         json={
             "email": "user@example.com",
+            "username": "user",
             "password": "password",
             "password_confirmation": "password",
         },
@@ -161,6 +174,25 @@ def test_auth_register_when_user_already_exists(
 
     assert response.status_code == status.HTTP_409_CONFLICT
     assert response.json() == {"detail": "A user with this email already exists."}
+
+
+def test_auth_register_when_user_username_already_exists(
+    client: TestClient, create_user
+):
+    create_user()
+
+    response = client.post(
+        "/auth/register",
+        json={
+            "email": "newuser@example.com",
+            "username": "username",
+            "password": "password",
+            "password_confirmation": "password",
+        },
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.json() == {"detail": "A user with this username already exists."}
 
 
 @pytest.mark.parametrize(
