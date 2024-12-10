@@ -144,6 +144,25 @@ def test_auth_register_validation_errors(
         assert expected_msg == err["msg"]
 
 
+def test_auth_register_when_user_already_exists(
+    client: TestClient,
+    create_user,
+):
+    create_user()
+
+    response = client.post(
+        "/auth/register",
+        json={
+            "email": "user@example.com",
+            "password": "password",
+            "password_confirmation": "password",
+        },
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.json() == {"detail": "A user with this email already exists."}
+
+
 @pytest.mark.parametrize(
     "email, password, persisted_user, expect_error",
     [

@@ -54,13 +54,18 @@ class RegisterRequest(BaseModel):
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register_user(request: RegisterRequest, session: SessionDep):
     """Creates and new user with provided credentials"""
-    username = request.email.split("@")[0]
+    email = request.email
+    username = email.split("@")[0]
     hashed_password = hash_password(request.password)
 
-    # TODO: check whether user with this email and username already exists
+    if session.exec(select(User).where(User.email == email)).first() is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A user with this email already exists.",
+        )
     # TODO: username can overlap here, when user has the same email prefix. For example:
     # user@example.com and user@another-example.com
-    user = User(email=request.email, username=username, hashed_password=hashed_password)
+    user = User(email=email, username=username, hashed_password=hashed_password)
     session.add(user)
     session.commit()
 
