@@ -56,4 +56,4 @@ def authenticated_client_fixture(client: TestClient, create_user):
     user = create_user()
     token = encode_token(user)
     client.headers = {"Authorization": f"Bearer {token}"}
-    return client
+    return client, user
