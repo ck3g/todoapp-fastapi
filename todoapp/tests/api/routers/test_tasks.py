@@ -20,14 +20,14 @@ def create_task_fixture(session: Session):
     yield _create_task
 
 
-def test_task_lists_unauthenticated(client: TestClient):
+def test_read_tasks_unauthenticated(client: TestClient):
     response = client.get("/tasks")
 
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.json() == {"detail": "Not authenticated"}
 
 
-def test_task_list_authenticated(
+def test_read_tasks_authenticated(
     authenticated_client: Tuple[TestClient, User], create_task, create_user
 ):
     client, current_user = authenticated_client
@@ -48,3 +48,46 @@ def test_task_list_authenticated(
             {"id": task2.id, "title": task2.title},
         ]
     }
+
+
+def test_read_single_task_unauthenticated(client: TestClient):
+    response = client.get("/tasks/1")
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.json() == {"detail": "Not authenticated"}
+
+
+def test_read_single_task_autheticated(authenticated_client: TestClient, create_task):
+    client, current_user = authenticated_client
+
+    task = create_task(user_id=current_user.id, title="Task 1")
+
+    response = client.get(f"/tasks/{task.id}")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {"id": task.id, "title": task.title}
+
+
+def test_read_single_task_authenticated_task_does_not_exist(
+    authenticated_client: TestClient,
+):
+    client, _ = authenticated_client
+
+    response = client.get("/tasks/1")
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.json() == {"detail": "Not found"}
+
+
+def test_read_single_task_authenticated_belongs_to_another_user(
+    authenticated_client: TestClient, create_task, create_user
+):
+    client, _ = authenticated_client
+
+    user = create_user(email="another-user@example.com", username="another-user")
+    task = create_task(user_id=user.id, title="Another user task")
+
+    response = client.get(f"/tasks/{task.id}")
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.json() == {"detail": "Not found"}

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, status
+from fastapi import APIRouter, HTTPException, status
 from sqlmodel import select
 
 from todoapp.api.routers.auth import UserDependency
@@ -19,5 +19,12 @@ async def read_tasks(current_user: UserDependency, session: SessionDep):
 
 
 @router.get("/{task_id}", status_code=status.HTTP_200_OK)
-async def read_task(task_id: int):
-    return {"id": task_id, "title": f"Task {task_id}"}
+async def read_task(current_user: UserDependency, session: SessionDep, task_id: int):
+    task = session.exec(
+        select(Task).where(Task.id == task_id, Task.user_id == current_user.id)
+    ).first()
+
+    if task is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+
+    return {"id": task.id, "title": task.title}
