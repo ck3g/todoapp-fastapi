@@ -23,4 +23,14 @@ class Task(SQLModel, table=True):
     @classmethod
     def all(cls, session: Session, user_id: int) -> "List[Task]":
         """Selects all tasks"""
-        return session.exec(select(cls).where(cls.user_id == user_id))
+        return session.exec(select(cls).where(cls.user_id == user_id)).fetchall()
+
+    @classmethod
+    def create_by(cls, session: Session, user_id: int, title: str) -> "Task":
+        """Creates a new task with provided parameters"""
+        task = Task(title=title, user_id=user_id)
+        session.add(task)
+        session.commit()
+        session.refresh(task)
+
+        return task

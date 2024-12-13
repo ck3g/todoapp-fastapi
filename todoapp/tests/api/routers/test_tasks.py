@@ -91,3 +91,41 @@ def test_read_single_task_authenticated_belongs_to_another_user(
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json() == {"detail": "Not found"}
+
+
+def test_create_task_unauthenticated(client: TestClient):
+    response = client.post("/tasks", json={"title": "New task"})
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.json() == {"detail": "Not authenticated"}
+
+
+def test_create_task_authenticated_success(
+    authenticated_client: TestClient, session: Session
+):
+    client, current_user = authenticated_client
+    response = client.post("/tasks", json={"title": "New task"})
+
+    task = Task.all(session, user_id=current_user.id)[0]
+
+    assert task is not None
+    assert task.user_id == current_user.id
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.json() == {"id": task.id, "title": task.title}
+
+
+def test_create_task_authenticated_with_invalid_title(
+    authenticated_client: TestClient, session: Session
+):
+    client, current_user = authenticated_client
+    response = client.post("/tasks", json={"title": ""})
+
+    tasks = Task.all(session, user_id=current_user.id)
+
+    assert len(tasks) == 0
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    json_response = response.json()
+    assert json_response["detail"][0]["loc"] == ["body", "title"]
+    assert (
+        json_response["detail"][0]["msg"] == "String should have at least 3 characters"
+    )
