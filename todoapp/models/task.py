@@ -21,9 +21,13 @@ class Task(SQLModel, table=True):
         ).first()
 
     @classmethod
-    def all(cls, session: Session, user_id: int) -> "List[Task]":
+    def all(cls, session: Session, user_id: int | None = None) -> "List[Task]":
         """Selects all tasks"""
-        return session.exec(select(cls).where(cls.user_id == user_id)).fetchall()
+        stmt = select(cls)
+        if user_id is not None:
+            stmt = stmt.where(cls.user_id == user_id)
+
+        return session.exec(stmt).fetchall()
 
     @classmethod
     def create_by(cls, session: Session, user_id: int, title: str) -> "Task":
@@ -34,3 +38,8 @@ class Task(SQLModel, table=True):
         session.refresh(task)
 
         return task
+
+    def destroy(self, session: Session):
+        """Deletes the task from the database"""
+        session.delete(self)
+        session.commit()

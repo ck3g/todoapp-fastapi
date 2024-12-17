@@ -129,3 +129,44 @@ def test_create_task_authenticated_with_invalid_title(
     assert (
         json_response["detail"][0]["msg"] == "String should have at least 3 characters"
     )
+
+
+def test_delete_task_unauthenticated(client: TestClient):
+    response = client.delete("/tasks/1")
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.json() == {"detail": "Not authenticated"}
+
+
+def test_delete_task_authenticated(
+    authenticated_client: TestClient, session: Session, create_task
+):
+    client, current_user = authenticated_client
+    task = create_task(user_id=current_user.id, title="To delete")
+
+    tasks = Task.all(session)
+    assert len(tasks) == 1
+
+    response = client.delete(f"/tasks/{task.id}")
+
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+    tasks = Task.all(session)
+    assert len(tasks) == 0
+
+
+def test_delete_task_authenticated_another_user_task(
+    authenticated_client: TestClient, session: Session, create_task, create_user
+):
+    client, _ = authenticated_client
+    user = create_user(email="another-user@example.com", username="another-user")
+    task = create_task(user_id=user.id, title="Another user task")
+
+    tasks = Task.all(session)
+    assert len(tasks) == 1
+
+    response = client.delete(f"/tasks/{task.id}")
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.json() == {"detail": "Not found"}
+    tasks = Task.all(session)
+    assert len(tasks) == 1

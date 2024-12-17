@@ -39,3 +39,12 @@ async def create_task(
     task = Task.create_by(session, title=request.title, user_id=current_user.id)
 
     return {"id": task.id, "title": task.title}
+
+
+@router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_task(current_user: UserDependency, session: SessionDep, task_id: int):
+    task = Task.find_by(session, task_id=task_id, user_id=current_user.id)
+    if task is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+
+    task.destroy(session)
