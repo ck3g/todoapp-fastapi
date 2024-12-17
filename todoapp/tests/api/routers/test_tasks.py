@@ -131,6 +131,58 @@ def test_create_task_authenticated_with_invalid_title(
     )
 
 
+def test_update_task_unauthenticated(client: TestClient):
+    response = client.patch("/tasks/1", json={"title": "Updated title"})
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.json() == {"detail": "Not authenticated"}
+
+
+def test_update_task_authenticated(
+    authenticated_client: TestClient, session: Session, create_task
+):
+    client, current_user = authenticated_client
+    task = create_task(user_id=current_user.id, title="Task title")
+
+    response = client.patch(f"/tasks/{task.id}", json={"title": "Updated title"})
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {"id": task.id, "title": "Updated title"}
+    updated_task = Task.find_by(session, user_id=current_user.id, task_id=task.id)
+    assert updated_task.title == "Updated title"
+
+
+def test_update_task_authenticated_another_user_task(
+    authenticated_client: TestClient, session: Session, create_task, create_user
+):
+    client, _ = authenticated_client
+    user = create_user(email="another-user@example.com", username="another-user")
+    task = create_task(user_id=user.id, title="Another user task")
+
+    response = client.patch(f"/tasks/{task.id}", json={"title": "Updated title"})
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.json() == {"detail": "Not found"}
+    task = Task.find_by(session, task_id=task.id, user_id=user.id)
+    assert task.title != "Updated title"
+
+
+def test_update_task_authenticated_invalid_title(
+    authenticated_client: TestClient, create_task
+):
+    client, current_user = authenticated_client
+    task = create_task(user_id=current_user.id, title="Task title")
+
+    response = client.patch(f"/tasks/{task.id}", json={"title": ""})
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    json_response = response.json()
+    assert json_response["detail"][0]["loc"] == ["body", "title"]
+    assert (
+        json_response["detail"][0]["msg"] == "String should have at least 3 characters"
+    )
+
+
 def test_delete_task_unauthenticated(client: TestClient):
     response = client.delete("/tasks/1")
 

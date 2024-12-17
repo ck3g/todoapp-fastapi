@@ -39,6 +39,19 @@ class Task(SQLModel, table=True):
 
         return task
 
+    def update(self, session: Session, **kwargs) -> "Task":
+        """Updates an existing task"""
+        self.updated_at = datetime.now(UTC)
+
+        for attr, value in kwargs.items():
+            setattr(self, attr, value)
+
+        session.add(self)
+        session.commit()
+        session.refresh(self)
+
+        return self
+
     def destroy(self, session: Session):
         """Deletes the task from the database"""
         session.delete(self)
