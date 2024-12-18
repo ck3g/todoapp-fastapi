@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from typing import Any, List
 
-from pydantic import BaseModel, model_serializer
+from pydantic import model_serializer
 from sqlmodel import Field, Session, SQLModel, select
 
 
@@ -11,6 +11,7 @@ class Task(SQLModel, table=True):
     id: int = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.id", nullable=False)
     title: str = Field(min_length=3, max_length=255, nullable=False)
+    completed: bool = Field(nullable=False, default=False)
     created_at: datetime = Field(default=datetime.now(UTC), nullable=False)
     updated_at: datetime = Field(default=datetime.now(UTC), nullable=False)
 
@@ -19,6 +20,7 @@ class Task(SQLModel, table=True):
         return {
             "id": self.id,
             "title": self.title,
+            "completed": self.completed,
             "created_at": str(self.created_at),
             "updated_at": str(self.updated_at),
         }

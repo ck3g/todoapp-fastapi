@@ -10,8 +10,8 @@ from todoapp.models import Task, User
 
 @pytest.fixture(name="create_task")
 def create_task_fixture(session: Session):
-    def _create_task(user_id, title):
-        task = Task(user_id=user_id, title=title)
+    def _create_task(user_id, title, completed=False):
+        task = Task(user_id=user_id, title=title, completed=completed)
         session.add(task)
         session.commit()
         session.refresh(task)
@@ -36,7 +36,7 @@ def test_read_tasks_authenticated(
         email="another-user@example.com", username="another-user"
     )
     task1 = create_task(user_id=current_user.id, title="Task 1")
-    task2 = create_task(user_id=current_user.id, title="Task 2")
+    task2 = create_task(user_id=current_user.id, title="Task 2", completed=True)
     create_task(user_id=another_user.id, title="Task 3")
 
     response = client.get("/tasks")
@@ -144,12 +144,30 @@ def test_update_task_authenticated(
     client, current_user = authenticated_client
     task = create_task(user_id=current_user.id, title="Task title")
 
+    response = client.patch(
+        f"/tasks/{task.id}", json={"title": "Updated title", "completed": True}
+    )
+
+    updated_task = Task.find_by(session, user_id=current_user.id, task_id=task.id)
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == updated_task.model_dump()
+    assert updated_task.title == "Updated title"
+    assert updated_task.completed
+
+
+def test_update_task_authenticated_only_title(
+    authenticated_client: TestClient, session: Session, create_task
+):
+    client, current_user = authenticated_client
+    task = create_task(user_id=current_user.id, title="Task title")
+
     response = client.patch(f"/tasks/{task.id}", json={"title": "Updated title"})
 
     updated_task = Task.find_by(session, user_id=current_user.id, task_id=task.id)
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == updated_task.model_dump()
     assert updated_task.title == "Updated title"
+    assert updated_task.completed == task.completed
 
 
 def test_update_task_authenticated_another_user_task(

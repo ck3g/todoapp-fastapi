@@ -1,3 +1,5 @@
+from typing import Optional
+
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
@@ -26,7 +28,8 @@ async def read_task(current_user: UserDependency, session: SessionDep, task_id: 
 
 
 class TaskRequest(BaseModel):
-    title: str = Field(min_length=3, max_length=255)
+    title: Optional[str] = Field(min_length=3, max_length=255)
+    completed: Optional[bool] = None
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=Task)
