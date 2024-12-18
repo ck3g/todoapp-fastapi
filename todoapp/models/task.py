@@ -1,6 +1,7 @@
 from datetime import UTC, datetime
-from typing import List
+from typing import Any, List
 
+from pydantic import BaseModel, model_serializer
 from sqlmodel import Field, Session, SQLModel, select
 
 
@@ -12,6 +13,15 @@ class Task(SQLModel, table=True):
     title: str = Field(min_length=3, max_length=255, nullable=False)
     created_at: datetime = Field(default=datetime.now(UTC), nullable=False)
     updated_at: datetime = Field(default=datetime.now(UTC), nullable=False)
+
+    @model_serializer
+    def serializer(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "title": self.title,
+            "created_at": str(self.created_at),
+            "updated_at": str(self.updated_at),
+        }
 
     @classmethod
     def find_by(cls, session: Session, task_id: int, user_id: int) -> "Task | None":

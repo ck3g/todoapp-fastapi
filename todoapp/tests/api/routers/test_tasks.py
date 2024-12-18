@@ -44,8 +44,8 @@ def test_read_tasks_authenticated(
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {
         "tasks": [
-            {"id": task1.id, "title": task1.title},
-            {"id": task2.id, "title": task2.title},
+            task1.model_dump(),
+            task2.model_dump(),
         ]
     }
 
@@ -65,7 +65,7 @@ def test_read_single_task_autheticated(authenticated_client: TestClient, create_
     response = client.get(f"/tasks/{task.id}")
 
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() == {"id": task.id, "title": task.title}
+    assert response.json() == task.model_dump()
 
 
 def test_read_single_task_authenticated_task_does_not_exist(
@@ -111,7 +111,7 @@ def test_create_task_authenticated_success(
     assert task is not None
     assert task.user_id == current_user.id
     assert response.status_code == status.HTTP_201_CREATED
-    assert response.json() == {"id": task.id, "title": task.title}
+    assert response.json() == task.model_dump()
 
 
 def test_create_task_authenticated_with_invalid_title(
@@ -146,9 +146,9 @@ def test_update_task_authenticated(
 
     response = client.patch(f"/tasks/{task.id}", json={"title": "Updated title"})
 
-    assert response.status_code == status.HTTP_200_OK
-    assert response.json() == {"id": task.id, "title": "Updated title"}
     updated_task = Task.find_by(session, user_id=current_user.id, task_id=task.id)
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == updated_task.model_dump()
     assert updated_task.title == "Updated title"
 
 

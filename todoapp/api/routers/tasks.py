@@ -10,38 +10,35 @@ router = APIRouter(prefix="/tasks", tags=["tasks"])
 
 @router.get("/", status_code=status.HTTP_200_OK)
 async def read_tasks(current_user: UserDependency, session: SessionDep):
-    results = Task.all(session, user_id=current_user.id)
-    tasks = []
-    for task in results:
-        tasks.append({"id": task.id, "title": task.title})
+    tasks = Task.all(session, user_id=current_user.id)
 
     return {"tasks": tasks}
 
 
-@router.get("/{task_id}", status_code=status.HTTP_200_OK)
+@router.get("/{task_id}", status_code=status.HTTP_200_OK, response_model=Task)
 async def read_task(current_user: UserDependency, session: SessionDep, task_id: int):
     task = Task.find_by(session, task_id=task_id, user_id=current_user.id)
 
     if task is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
 
-    return {"id": task.id, "title": task.title}
+    return task
 
 
 class TaskRequest(BaseModel):
     title: str = Field(min_length=3, max_length=255)
 
 
-@router.post("/", status_code=status.HTTP_201_CREATED)
+@router.post("/", status_code=status.HTTP_201_CREATED, response_model=Task)
 async def create_task(
     current_user: UserDependency, session: SessionDep, request: TaskRequest
 ):
     task = Task.create_by(session, title=request.title, user_id=current_user.id)
 
-    return {"id": task.id, "title": task.title}
+    return task
 
 
-@router.patch("/{task_id}", status_code=status.HTTP_200_OK)
+@router.patch("/{task_id}", status_code=status.HTTP_200_OK, response_model=Task)
 async def update_task(
     current_user: UserDependency,
     session: SessionDep,
@@ -55,7 +52,7 @@ async def update_task(
     attrs = request.model_dump(exclude_unset=True)
     task = task.update(session, **attrs)
 
-    return {"id": task.id, "title": task.title}
+    return task
 
 
 @router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
