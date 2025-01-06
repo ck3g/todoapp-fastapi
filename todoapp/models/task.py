@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Any, List
 
 from pydantic import model_serializer
@@ -11,7 +11,9 @@ class Task(SQLModel, table=True):
     id: int = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.id", nullable=False)
     title: str = Field(min_length=3, max_length=255, nullable=False)
+    note: str = Field(max_length=1_000, default="", nullable=False)
     completed: bool = Field(nullable=False, default=False)
+    due_date: date = Field(nullable=True)
     created_at: datetime = Field(default=datetime.now(UTC), nullable=False)
     updated_at: datetime = Field(default=datetime.now(UTC), nullable=False)
 
