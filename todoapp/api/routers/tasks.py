@@ -1,7 +1,8 @@
-from typing import Optional
+from datetime import datetime
+from typing import Any, Optional
 
 from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from todoapp.api.routers.auth import UserDependency
 from todoapp.database.session import SessionDep
@@ -30,7 +31,21 @@ async def read_task(current_user: UserDependency, session: SessionDep, task_id: 
 class TaskRequest(BaseModel):
     title: Optional[str] = Field(min_length=3, max_length=255)
     note: Optional[str] = Field(max_length=1_000, default="")
+    due_date: Optional[str] = None
     completed: Optional[bool] = None
+
+    @field_validator("due_date")
+    @classmethod
+    def validate_due_date(cls, value: Any):
+        """Ensures that due_date is correct date"""
+        if value is None:
+            return value
+
+        try:
+            parsed_date = datetime.strptime(value, "%Y-%m-%d").date()
+            return parsed_date
+        except ValueError as exc:
+            raise ValueError("Invalid date format. Please use YYYY-MM-DD.") from exc
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=Task)
@@ -38,7 +53,11 @@ async def create_task(
     current_user: UserDependency, session: SessionDep, request: TaskRequest
 ):
     task = Task.create_by(
-        session, title=request.title, user_id=current_user.id, note=request.note
+        session,
+        title=request.title,
+        user_id=current_user.id,
+        note=request.note,
+        due_date=request.due_date,
     )
 
     return task

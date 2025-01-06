@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Tuple
 
 import pytest
@@ -116,6 +117,24 @@ def test_create_task_authenticated_success(
     assert response.json() == task.model_dump()
 
 
+def test_create_task_authenticated_with_due_date_success(
+    authenticated_client: TestClient, session: Session
+):
+    client, current_user = authenticated_client
+    response = client.post(
+        "/tasks", json={"title": "New task", "due_date": "2015-01-06"}
+    )
+
+    task = Task.all(session, user_id=current_user.id)[0]
+
+    assert task is not None
+    assert task.user_id == current_user.id
+    assert task.title == "New task"
+    assert task.due_date == date(2015, 1, 6)
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.json() == task.model_dump()
+
+
 def test_create_task_authenticated_with_invalid_title(
     authenticated_client: TestClient, session: Session
 ):
@@ -130,6 +149,24 @@ def test_create_task_authenticated_with_invalid_title(
     assert json_response["detail"][0]["loc"] == ["body", "title"]
     assert (
         json_response["detail"][0]["msg"] == "String should have at least 3 characters"
+    )
+
+
+def test_create_task_authenticated_with_invalid_due_date(
+    authenticated_client: TestClient, session: Session
+):
+    client, current_user = authenticated_client
+    response = client.post("/tasks", json={"title": "New task", "due_date": "Invalid"})
+
+    tasks = Task.all(session, user_id=current_user.id)
+
+    assert len(tasks) == 0
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    json_response = response.json()
+    assert json_response["detail"][0]["loc"] == ["body", "due_date"]
+    assert (
+        json_response["detail"][0]["msg"]
+        == "Value error, Invalid date format. Please use YYYY-MM-DD."
     )
 
 
@@ -148,7 +185,12 @@ def test_update_task_authenticated(
 
     response = client.patch(
         f"/tasks/{task.id}",
-        json={"title": "Updated title", "completed": True, "note": "Updated note"},
+        json={
+            "title": "Updated title",
+            "completed": True,
+            "note": "Updated note",
+            "due_date": "2025-01-07",
+        },
     )
 
     updated_task = Task.find_by(session, user_id=current_user.id, task_id=task.id)
@@ -156,6 +198,7 @@ def test_update_task_authenticated(
     assert response.json() == updated_task.model_dump()
     assert updated_task.title == "Updated title"
     assert updated_task.note == "Updated note"
+    assert updated_task.due_date == date(2025, 1, 7)
     assert updated_task.completed
 
 
