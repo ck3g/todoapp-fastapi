@@ -104,12 +104,14 @@ def test_create_task_authenticated_success(
     authenticated_client: TestClient, session: Session
 ):
     client, current_user = authenticated_client
-    response = client.post("/tasks", json={"title": "New task"})
+    response = client.post("/tasks", json={"title": "New task", "note": "Task note"})
 
     task = Task.all(session, user_id=current_user.id)[0]
 
     assert task is not None
     assert task.user_id == current_user.id
+    assert task.title == "New task"
+    assert task.note == "Task note"
     assert response.status_code == status.HTTP_201_CREATED
     assert response.json() == task.model_dump()
 
@@ -145,13 +147,15 @@ def test_update_task_authenticated(
     task = create_task(user_id=current_user.id, title="Task title")
 
     response = client.patch(
-        f"/tasks/{task.id}", json={"title": "Updated title", "completed": True}
+        f"/tasks/{task.id}",
+        json={"title": "Updated title", "completed": True, "note": "Updated note"},
     )
 
     updated_task = Task.find_by(session, user_id=current_user.id, task_id=task.id)
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == updated_task.model_dump()
     assert updated_task.title == "Updated title"
+    assert updated_task.note == "Updated note"
     assert updated_task.completed
 
 

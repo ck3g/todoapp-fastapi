@@ -29,6 +29,7 @@ async def read_task(current_user: UserDependency, session: SessionDep, task_id: 
 
 class TaskRequest(BaseModel):
     title: Optional[str] = Field(min_length=3, max_length=255)
+    note: Optional[str] = Field(max_length=1_000, default="")
     completed: Optional[bool] = None
 
 
@@ -36,7 +37,9 @@ class TaskRequest(BaseModel):
 async def create_task(
     current_user: UserDependency, session: SessionDep, request: TaskRequest
 ):
-    task = Task.create_by(session, title=request.title, user_id=current_user.id)
+    task = Task.create_by(
+        session, title=request.title, user_id=current_user.id, note=request.note
+    )
 
     return task
 

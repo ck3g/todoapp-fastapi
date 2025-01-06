@@ -22,6 +22,7 @@ class Task(SQLModel, table=True):
         return {
             "id": self.id,
             "title": self.title,
+            "note": self.note,
             "completed": self.completed,
             "created_at": str(self.created_at),
             "updated_at": str(self.updated_at),
@@ -44,9 +45,12 @@ class Task(SQLModel, table=True):
         return session.exec(stmt).fetchall()
 
     @classmethod
-    def create_by(cls, session: Session, user_id: int, title: str) -> "Task":
+    def create_by(cls, session: Session, **kwargs) -> "Task":
         """Creates a new task with provided parameters"""
-        task = Task(title=title, user_id=user_id)
+        task = cls()
+        for attr, value in kwargs.items():
+            setattr(task, attr, value)
+
         session.add(task)
         session.commit()
         session.refresh(task)
