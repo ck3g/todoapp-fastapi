@@ -10,6 +10,13 @@ from todoapp.models import TaskList
 router = APIRouter(prefix="/lists", tags=["lists"])
 
 
+@router.get("/", status_code=status.HTTP_200_OK)
+async def read_lists(current_user: UserDependency, session: SessionDep):
+    lists = TaskList.all(session, user_id=current_user.id)
+
+    return {"lists": lists}
+
+
 class ListRequest(BaseModel):
     title: Optional[str] = Field(min_length=3, max_length=50)
 
