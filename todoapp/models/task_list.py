@@ -16,9 +16,9 @@ class TaskList(SQLModel, table=True):
     created_at: datetime = Field(default=datetime.now(UTC), nullable=False)
     updated_at: datetime = Field(default=datetime.now(UTC), nullable=False)
 
-    # @model_serializer
-    # def serializer(self) -> dict[str, Any]:
-    #     return {"id": self.id, "title": self.title}
+    @model_serializer
+    def serializer(self) -> dict[str, Any]:
+        return {"id": self.id, "title": self.title}
 
     @classmethod
     def all(cls, session: Session, user_id: int | None = None) -> "List[TaskList]":
