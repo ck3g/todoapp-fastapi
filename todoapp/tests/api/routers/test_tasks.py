@@ -193,7 +193,7 @@ def test_update_task_authenticated(
         },
     )
 
-    updated_task = Task.find_by(session, user_id=current_user.id, task_id=task.id)
+    updated_task = Task.find_by(session, user_id=current_user.id, obj_id=task.id)
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == updated_task.model_dump()
     assert updated_task.title == "Updated title"
@@ -210,7 +210,7 @@ def test_update_task_authenticated_only_title(
 
     response = client.patch(f"/tasks/{task.id}", json={"title": "Updated title"})
 
-    updated_task = Task.find_by(session, user_id=current_user.id, task_id=task.id)
+    updated_task = Task.find_by(session, user_id=current_user.id, obj_id=task.id)
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == updated_task.model_dump()
     assert updated_task.title == "Updated title"
@@ -228,7 +228,7 @@ def test_update_task_authenticated_another_user_task(
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json() == {"detail": "Not found"}
-    task = Task.find_by(session, task_id=task.id, user_id=user.id)
+    task = Task.find_by(session, obj_id=task.id, user_id=user.id)
     assert task.title != "Updated title"
 
 

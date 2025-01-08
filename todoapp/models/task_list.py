@@ -4,8 +4,10 @@ from typing import Any, List
 from pydantic import model_serializer
 from sqlmodel import Field, Session, SQLModel, select
 
+from todoapp.models.base_model import BaseModel
 
-class TaskList(SQLModel, table=True):
+
+class TaskList(BaseModel, table=True):
     """List allows to group several tasks"""
 
     __tablename__ = "list"
@@ -19,25 +21,3 @@ class TaskList(SQLModel, table=True):
     @model_serializer
     def serializer(self) -> dict[str, Any]:
         return {"id": self.id, "title": self.title}
-
-    @classmethod
-    def all(cls, session: Session, user_id: int | None = None) -> "List[TaskList]":
-        """Select all task lists"""
-        stmt = select(cls)
-        if user_id is not None:
-            stmt = stmt.where(cls.user_id == user_id)
-
-        return session.exec(stmt).fetchall()
-
-    @classmethod
-    def create_by(cls, session: Session, **kwargs) -> "TaskList":
-        """Creates a new task list with provided parameters"""
-        lst = cls()
-        for attr, value in kwargs.items():
-            setattr(lst, attr, value)
-
-        session.add(lst)
-        session.commit()
-        session.refresh(lst)
-
-        return lst

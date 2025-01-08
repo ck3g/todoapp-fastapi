@@ -20,7 +20,7 @@ async def read_tasks(current_user: UserDependency, session: SessionDep):
 
 @router.get("/{task_id}", status_code=status.HTTP_200_OK, response_model=Task)
 async def read_task(current_user: UserDependency, session: SessionDep, task_id: int):
-    task = Task.find_by(session, task_id=task_id, user_id=current_user.id)
+    task = Task.find_by(session, obj_id=task_id, user_id=current_user.id)
 
     if task is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
@@ -70,7 +70,7 @@ async def update_task(
     task_id: int,
     request: TaskRequest,
 ):
-    task = Task.find_by(session, task_id=task_id, user_id=current_user.id)
+    task = Task.find_by(session, obj_id=task_id, user_id=current_user.id)
     if task is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
 
@@ -82,7 +82,7 @@ async def update_task(
 
 @router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_task(current_user: UserDependency, session: SessionDep, task_id: int):
-    task = Task.find_by(session, task_id=task_id, user_id=current_user.id)
+    task = Task.find_by(session, obj_id=task_id, user_id=current_user.id)
     if task is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
 
