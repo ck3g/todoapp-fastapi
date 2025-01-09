@@ -55,3 +55,12 @@ async def update_list(
     lst = lst.update(session, **attrs)
 
     return lst
+
+
+@router.delete("/{list_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_list(current_user: UserDependency, session: SessionDep, list_id: int):
+    lst = TaskList.find_by(session, user_id=current_user.id, obj_id=list_id)
+    if lst is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+
+    lst.destroy(session)

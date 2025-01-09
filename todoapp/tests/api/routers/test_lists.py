@@ -173,3 +173,40 @@ def test_update_list_authenticated_invalid_title(
     assert (
         json_response["detail"][0]["msg"] == "String should have at least 3 characters"
     )
+
+
+def test_delete_list_unauthenticated(client: TestClient):
+    response = client.delete("/lists/1")
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+def test_delete_list_authenticated_success(
+    authenticated_client: Tuple[TestClient, User], session: Session, create_list
+):
+    client, current_user = authenticated_client
+
+    lst = create_list(user_id=current_user.id, title="List title")
+
+    response = client.delete(f"/lists/{lst.id}")
+
+    assert TaskList.find_by(session, user_id=current_user.id, obj_id=lst.id) is None
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
+
+def test_delete_list_authenticated_belongs_to_another_user(
+    authenticated_client: Tuple[TestClient, User],
+    session: Session,
+    create_list,
+    create_user,
+):
+    client, _current_user = authenticated_client
+
+    user = create_user(email="user2@example.com", username="user2")
+    lst = create_list(user_id=user.id, title="List title")
+
+    response = client.delete(f"/lists/{lst.id}")
+
+    assert TaskList.find_by(session, user_id=user.id, obj_id=lst.id) is not None
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.json() == {"detail": "Not found"}
