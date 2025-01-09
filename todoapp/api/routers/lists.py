@@ -38,3 +38,20 @@ async def create_list(
     lst = TaskList.create_by(session, title=request.title, user_id=current_user.id)
 
     return lst
+
+
+@router.patch("/{list_id}", status_code=status.HTTP_200_OK)
+async def update_list(
+    current_user: UserDependency,
+    session: SessionDep,
+    request: ListRequest,
+    list_id: int,
+):
+    lst = TaskList.find_by(session, user_id=current_user.id, obj_id=list_id)
+    if lst is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+
+    attrs = request.model_dump(exclude_unset=True)
+    lst = lst.update(session, **attrs)
+
+    return lst

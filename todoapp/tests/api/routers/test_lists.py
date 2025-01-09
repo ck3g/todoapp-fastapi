@@ -104,7 +104,7 @@ def test_create_list_authenticated(authenticated_client: TestClient, session: Se
 
 
 def test_create_list_authenticated_with_invalid_title(
-    authenticated_client: TestClient, session: Session
+    authenticated_client: Tuple[TestClient, User], session: Session
 ):
     client, current_user = authenticated_client
     response = client.post("/lists", json={"title": "L"})
@@ -112,6 +112,61 @@ def test_create_list_authenticated_with_invalid_title(
     lists = TaskList.all(session, user_id=current_user.id)
 
     assert len(lists) == 0
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    json_response = response.json()
+    assert json_response["detail"][0]["loc"] == ["body", "title"]
+    assert (
+        json_response["detail"][0]["msg"] == "String should have at least 3 characters"
+    )
+
+
+def test_update_list_unauthenticated(client: TestClient):
+    response = client.patch("/lists/1", json={"title": "Updated title"})
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+def test_update_list_authenticated_success(
+    authenticated_client: Tuple[TestClient, User], create_list
+):
+    client, current_user = authenticated_client
+
+    lst = create_list(user_id=current_user.id, title="List title")
+
+    response = client.patch(f"/lists/{lst.id}", json={"title": "Updated title"})
+
+    assert lst.title == "Updated title"
+    assert response.status_code == status.HTTP_200_OK
+    json_response = response.json()
+    assert json_response == lst.model_dump()
+    assert json_response["title"] == "Updated title"
+
+
+def test_update_list_authenticated_blongs_to_another_user(
+    authenticated_client: Tuple[TestClient, User], create_list, create_user
+):
+    client, _current_user = authenticated_client
+
+    user = create_user(email="user2@example.com", username="user2")
+    lst = create_list(user_id=user.id, title="List title")
+
+    response = client.patch(f"/lists/{lst.id}", json={"title": "Updated title"})
+
+    assert lst.title == "List title"
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.json() == {"detail": "Not found"}
+
+
+def test_update_list_authenticated_invalid_title(
+    authenticated_client: Tuple[TestClient, User], create_list
+):
+    client, current_user = authenticated_client
+
+    lst = create_list(user_id=current_user.id, title="List title")
+
+    response = client.patch(f"/lists/{lst.id}", json={"title": "L"})
+
+    assert lst.title == "List title"
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
     json_response = response.json()
     assert json_response["detail"][0]["loc"] == ["body", "title"]
