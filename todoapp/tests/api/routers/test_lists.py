@@ -46,6 +46,39 @@ def test_read_lists_authenticated(
     }
 
 
+def test_read_single_list_unauthenticated(client: TestClient):
+    response = client.get("/lists/1")
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+def test_read_single_list_authenticated(
+    authenticated_client: Tuple[TestClient, User], create_list
+):
+    client, current_user = authenticated_client
+
+    lst = create_list(user_id=current_user.id, title="List 1")
+
+    response = client.get(f"/lists/{lst.id}")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == lst.model_dump()
+
+
+def test_read_single_list_authenticated_belongs_to_another_user(
+    authenticated_client: Tuple[TestClient, User], create_user, create_list
+):
+    client, _current_user = authenticated_client
+
+    user = create_user(email="user2@example.com", username="user2")
+    lst = create_list(user_id=user.id, title="List 1")
+
+    response = client.get(f"/lists/{lst.id}")
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.json() == {"detail": "Not found"}
+
+
 def test_create_list_unauthenticated(client: TestClient):
     response = client.post("/lists", json={"title": "New list"})
 

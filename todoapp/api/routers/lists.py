@@ -17,6 +17,16 @@ async def read_lists(current_user: UserDependency, session: SessionDep):
     return {"lists": lists}
 
 
+@router.get("/{list_id}", status_code=status.HTTP_200_OK)
+async def read_list(current_user: UserDependency, session: SessionDep, list_id: int):
+    lst = TaskList.find_by(session, user_id=current_user.id, obj_id=list_id)
+
+    if lst is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+
+    return lst
+
+
 class ListRequest(BaseModel):
     title: Optional[str] = Field(min_length=3, max_length=50)
 
