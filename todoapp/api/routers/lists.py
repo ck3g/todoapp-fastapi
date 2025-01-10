@@ -1,8 +1,6 @@
-from typing import Optional
-
 from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel, Field
 
+from todoapp.api.models.list import ListRequest
 from todoapp.api.routers.auth import UserDependency
 from todoapp.database.session import SessionDep
 from todoapp.models import TaskList
@@ -25,10 +23,6 @@ async def read_list(current_user: UserDependency, session: SessionDep, list_id: 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
 
     return lst
-
-
-class ListRequest(BaseModel):
-    title: Optional[str] = Field(min_length=3, max_length=50)
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
