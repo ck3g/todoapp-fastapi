@@ -12,6 +12,7 @@ class Task(BaseModel, table=True):
 
     id: int = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.id", nullable=False)
+    list_id: int = Field(foreign_key="list.id", nullable=True)
     title: str = Field(min_length=3, max_length=255, nullable=False)
     note: str = Field(max_length=1_000, default="", nullable=False)
     completed: bool = Field(nullable=False, default=False)
