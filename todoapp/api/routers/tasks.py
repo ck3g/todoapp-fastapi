@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from todoapp.api.routers.auth import UserDependency
 from todoapp.database.session import SessionDep
-from todoapp.models import Task
+from todoapp.models import Task, TaskList
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
@@ -53,6 +53,14 @@ class TaskRequest(BaseModel):
 async def create_task(
     current_user: UserDependency, session: SessionDep, request: TaskRequest
 ):
+    if request.list_id is not None:
+        lst = TaskList.find_by(session, user_id=current_user.id, obj_id=request.list_id)
+        if lst is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="List does not exist",
+            )
+
     attrs = request.model_dump(exclude_unset=True)
     task = Task.create_by(session, user_id=current_user.id, **attrs)
 

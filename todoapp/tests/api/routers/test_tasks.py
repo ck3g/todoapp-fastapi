@@ -99,6 +99,7 @@ def test_create_task_authenticated_success(
 
     assert task is not None
     assert task.user_id == current_user.id
+    assert task.list_id is None
     assert task.title == "New task"
     assert task.note == "Task note"
     assert response.status_code == status.HTTP_201_CREATED
@@ -177,6 +178,26 @@ def test_create_task_authenticated_with_invalid_due_date(
         json_response["detail"][0]["msg"]
         == "Value error, Invalid date format. Please use YYYY-MM-DD."
     )
+
+
+def test_create_task_authenticated_with_list_id_of_another_user(
+    authenticated_client: Tuple[TestClient, User],
+    session: Session,
+    create_user,
+    create_list,
+):
+    client, current_user = authenticated_client
+
+    user = create_user(email="user2@example.com", username="user2")
+    lst = create_list(user_id=user.id, title="Another user list")
+
+    response = client.post("/tasks", json={"title": "New task", "list_id": lst.id})
+
+    tasks = Task.all(session, user_id=current_user.id)
+
+    assert len(tasks) == 0
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.json() == {"detail": "List does not exist"}
 
 
 def test_update_task_unauthenticated(client: TestClient):
