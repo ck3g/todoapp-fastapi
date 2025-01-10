@@ -28,13 +28,7 @@ async def read_task(current_user: UserDependency, session: SessionDep, task_id: 
     return task
 
 
-class TaskRequest(BaseModel):
-    title: Optional[str] = Field(min_length=3, max_length=255)
-    note: Optional[str] = Field(max_length=1_000, default="")
-    due_date: Optional[str] = None
-    completed: Optional[bool] = None
-    list_id: Optional[int] = None
-
+class DueDateValidatorMixin:
     @field_validator("due_date")
     @classmethod
     def validate_due_date(cls, value: Any):
@@ -49,9 +43,25 @@ class TaskRequest(BaseModel):
             raise ValueError("Invalid date format. Please use YYYY-MM-DD.") from exc
 
 
+class CreateTaskRequest(BaseModel, DueDateValidatorMixin):
+    title: str = Field(min_length=3, max_length=255)
+    note: Optional[str] = Field(default="", max_length=1_000)
+    due_date: Optional[str] = None
+    completed: Optional[bool] = None
+    list_id: Optional[int] = None
+
+
+class UpdateTaskRequest(BaseModel, DueDateValidatorMixin):
+    title: Optional[str] = Field(default=None, min_length=3, max_length=255)
+    note: Optional[str] = Field(default="", max_length=1_000)
+    due_date: Optional[str] = None
+    completed: Optional[bool] = None
+    list_id: Optional[int] = None
+
+
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=Task)
 async def create_task(
-    current_user: UserDependency, session: SessionDep, request: TaskRequest
+    current_user: UserDependency, session: SessionDep, request: CreateTaskRequest
 ):
     if request.list_id is not None:
         lst = TaskList.find_by(session, user_id=current_user.id, obj_id=request.list_id)
@@ -72,11 +82,19 @@ async def update_task(
     current_user: UserDependency,
     session: SessionDep,
     task_id: int,
-    request: TaskRequest,
+    request: UpdateTaskRequest,
 ):
     task = Task.find_by(session, obj_id=task_id, user_id=current_user.id)
     if task is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+
+    if request.list_id is not None:
+        lst = TaskList.find_by(session, obj_id=request.list_id, user_id=current_user.id)
+        if lst is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="List does not exist",
+            )
 
     attrs = request.model_dump(exclude_unset=True)
     task = task.update(session, **attrs)

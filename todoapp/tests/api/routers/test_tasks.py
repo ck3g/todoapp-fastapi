@@ -1,7 +1,6 @@
 from datetime import date
 from typing import Tuple
 
-import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 from sqlmodel import Session
@@ -247,6 +246,27 @@ def test_update_task_authenticated_only_title(
     assert updated_task.completed == task.completed
 
 
+def test_update_task_authenticated_only_list_id(
+    authenticated_client: Tuple[TestClient, User],
+    session: Session,
+    create_list,
+    create_task,
+):
+    client, current_user = authenticated_client
+    task = create_task(user_id=current_user.id, title="Task title")
+    lst = create_list(user_id=current_user.id, title="List title")
+
+    response = client.patch(f"/tasks/{task.id}", json={"list_id": lst.id})
+
+    updated_task = Task.find_by(session, user_id=current_user.id, obj_id=task.id)
+    json_response = response.json()
+
+    assert response.status_code == status.HTTP_200_OK
+    assert json_response == updated_task.model_dump()
+    assert json_response["list_id"] == lst.id
+    assert updated_task.list_id == lst.id
+
+
 def test_update_task_authenticated_another_user_task(
     authenticated_client: TestClient, session: Session, create_task, create_user
 ):
@@ -260,6 +280,23 @@ def test_update_task_authenticated_another_user_task(
     assert response.json() == {"detail": "Not found"}
     task = Task.find_by(session, obj_id=task.id, user_id=user.id)
     assert task.title != "Updated title"
+
+
+def test_update_task_authenticated_another_user_list(
+    authenticated_client: Tuple[TestClient, User],
+    create_task,
+    create_user,
+    create_list,
+):
+    client, current_user = authenticated_client
+    task = create_task(user_id=current_user.id, title="Task title")
+    user = create_user(email="user2@example.com", username="user2")
+    lst = create_list(user_id=user.id, title="List 1")
+
+    response = client.patch(f"/tasks/{task.id}", json={"list_id": lst.id})
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.json() == {"detail": "List does not exist"}
 
 
 def test_update_task_authenticated_invalid_title(
