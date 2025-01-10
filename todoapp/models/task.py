@@ -1,8 +1,8 @@
 from datetime import UTC, date, datetime
-from typing import Any, List
+from typing import Any
 
 from pydantic import model_serializer
-from sqlmodel import Field, Session, SQLModel, select
+from sqlmodel import Field
 
 from todoapp.models.base_model import BaseModel
 
@@ -16,8 +16,6 @@ class Task(BaseModel, table=True):
     note: str = Field(max_length=1_000, default="", nullable=False)
     completed: bool = Field(nullable=False, default=False)
     due_date: date = Field(nullable=True)
-    created_at: datetime = Field(default=datetime.now(UTC), nullable=False)
-    updated_at: datetime = Field(default=datetime.now(UTC), nullable=False)
 
     @model_serializer
     def serializer(self) -> dict[str, Any]:
