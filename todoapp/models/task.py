@@ -22,6 +22,7 @@ class Task(BaseModel, table=True):
     def serializer(self) -> dict[str, Any]:
         return {
             "id": self.id,
+            "list_id": self.list_id,
             "title": self.title,
             "note": self.note,
             "completed": self.completed,

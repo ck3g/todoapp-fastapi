@@ -5,7 +5,7 @@ from sqlmodel.pool import StaticPool
 
 from todoapp.database.session import get_session
 from todoapp.main import app
-from todoapp.models import User
+from todoapp.models import Task, TaskList, User
 from todoapp.security.token import encode_token
 
 
@@ -38,6 +38,14 @@ def client_fixture(session: Session):
     app.dependency_overrides.clear()
 
 
+@pytest.fixture(name="authenticated_client")
+def authenticated_client_fixture(client: TestClient, create_user):
+    user = create_user()
+    token = encode_token(user)
+    client.headers = {"Authorization": f"Bearer {token}"}
+    return client, user
+
+
 @pytest.fixture(name="create_user", scope="function")
 def create_user_fixture(session: Session):
     def _create_user(email="user@example.com", username="username", password="pwd123"):
@@ -51,9 +59,21 @@ def create_user_fixture(session: Session):
     yield _create_user
 
 
-@pytest.fixture(name="authenticated_client")
-def authenticated_client_fixture(client: TestClient, create_user):
-    user = create_user()
-    token = encode_token(user)
-    client.headers = {"Authorization": f"Bearer {token}"}
-    return client, user
+@pytest.fixture(name="create_task")
+def create_task_fixture(session: Session):
+    def _create_task(user_id, title, completed=False):
+        task = Task(user_id=user_id, title=title, completed=completed)
+        session.add(task)
+        session.commit()
+        session.refresh(task)
+        return task
+
+    yield _create_task
+
+
+@pytest.fixture(name="create_list")
+def create_list_fixture(session: Session):
+    def _create_list(user_id, title):
+        return TaskList.create_by(session, user_id=user_id, title=title)
+
+    yield _create_list

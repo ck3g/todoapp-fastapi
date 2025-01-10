@@ -33,6 +33,7 @@ class TaskRequest(BaseModel):
     note: Optional[str] = Field(max_length=1_000, default="")
     due_date: Optional[str] = None
     completed: Optional[bool] = None
+    list_id: Optional[int] = None
 
     @field_validator("due_date")
     @classmethod
@@ -52,13 +53,8 @@ class TaskRequest(BaseModel):
 async def create_task(
     current_user: UserDependency, session: SessionDep, request: TaskRequest
 ):
-    task = Task.create_by(
-        session,
-        title=request.title,
-        user_id=current_user.id,
-        note=request.note,
-        due_date=request.due_date,
-    )
+    attrs = request.model_dump(exclude_unset=True)
+    task = Task.create_by(session, user_id=current_user.id, **attrs)
 
     return task
 

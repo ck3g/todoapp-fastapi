@@ -8,14 +8,6 @@ from sqlmodel import Session
 from todoapp.models import TaskList, User
 
 
-@pytest.fixture(name="create_list")
-def create_list_fixture(session: Session):
-    def _create_list(user_id, title):
-        return TaskList.create_by(session, user_id=user_id, title=title)
-
-    yield _create_list
-
-
 def test_read_lists_unauthenticated(client: TestClient):
     response = client.get("/lists")
 

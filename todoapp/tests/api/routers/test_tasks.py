@@ -9,18 +9,6 @@ from sqlmodel import Session
 from todoapp.models import Task, User
 
 
-@pytest.fixture(name="create_task")
-def create_task_fixture(session: Session):
-    def _create_task(user_id, title, completed=False):
-        task = Task(user_id=user_id, title=title, completed=completed)
-        session.add(task)
-        session.commit()
-        session.refresh(task)
-        return task
-
-    yield _create_task
-
-
 def test_read_tasks_unauthenticated(client: TestClient):
     response = client.get("/tasks")
 
@@ -133,6 +121,27 @@ def test_create_task_authenticated_with_due_date_success(
     assert task.due_date == date(2015, 1, 6)
     assert response.status_code == status.HTTP_201_CREATED
     assert response.json() == task.model_dump()
+
+
+def test_create_task_authenticated_with_list_id_success(
+    authenticated_client: Tuple[TestClient, User], session: Session, create_list
+):
+    client, current_user = authenticated_client
+    lst = create_list(user_id=current_user.id, title="List 1")
+
+    response = client.post("/tasks", json={"title": "New task", "list_id": lst.id})
+
+    tasks = Task.all(session, user_id=current_user.id)
+
+    assert len(tasks) == 1
+    task = tasks[0]
+    assert task.user_id == current_user.id
+    assert task.title == "New task"
+    assert task.list_id == lst.id
+    assert response.status_code == status.HTTP_201_CREATED
+    json_response = response.json()
+    assert json_response == task.model_dump()
+    assert json_response["list_id"] == lst.id
 
 
 def test_create_task_authenticated_with_invalid_title(
