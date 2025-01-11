@@ -1,10 +1,11 @@
-from datetime import UTC, date, datetime
-from typing import Any
+from datetime import date
+from typing import Any, Optional
 
 from pydantic import model_serializer
-from sqlmodel import Field
+from sqlmodel import Field, Relationship
 
 from todoapp.models.base_model import BaseModel
+from todoapp.models.task_list import TaskList
 
 
 class Task(BaseModel, table=True):
@@ -12,11 +13,13 @@ class Task(BaseModel, table=True):
 
     id: int = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.id", nullable=False)
-    list_id: int = Field(foreign_key="list.id", nullable=True)
+    list_id: int | None = Field(foreign_key="list.id", nullable=True)
     title: str = Field(min_length=3, max_length=255, nullable=False)
     note: str = Field(max_length=1_000, default="", nullable=False)
     completed: bool = Field(nullable=False, default=False)
     due_date: date = Field(nullable=True)
+
+    task_list: Optional["TaskList"] = Relationship(back_populates="tasks")
 
     @model_serializer
     def serializer(self) -> dict[str, Any]:

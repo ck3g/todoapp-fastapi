@@ -1,10 +1,13 @@
-from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import model_serializer
-from sqlmodel import Field
+from sqlmodel import Field, Relationship
 
 from todoapp.models.base_model import BaseModel
+
+# Prevents circular imports problem
+if TYPE_CHECKING:
+    from todoapp.models.task import Task
 
 
 class TaskList(BaseModel, table=True):
@@ -15,6 +18,8 @@ class TaskList(BaseModel, table=True):
     id: int = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.id", nullable=False)
     title: str = Field(min_length=3, max_length=50, nullable=False)
+
+    tasks: list["Task"] = Relationship(back_populates="task_list")
 
     @model_serializer
     def serializer(self) -> dict[str, Any]:
