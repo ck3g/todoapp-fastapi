@@ -29,18 +29,14 @@ async def read_task(current_user: UserDependency, session: SessionDep, task_id: 
 async def create_task(
     current_user: UserDependency, session: SessionDep, request: CreateTaskRequest
 ):
-    if request.list_id is not None:
-        lst = TaskList.find_by(session, user_id=current_user.id, obj_id=request.list_id)
-        if lst is None:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="List does not exist",
-            )
-
     attrs = request.model_dump(exclude_unset=True)
-    task = Task.create_by(session, user_id=current_user.id, **attrs)
+    task_list = None
+    if list_id := attrs.pop("list_id", None):
+        task_list = TaskList.find_by(session, user_id=current_user.id, obj_id=list_id)
 
-    return task
+    return Task.create_by(
+        session, user_id=current_user.id, task_list=task_list, **attrs
+    )
 
 
 @router.patch("/{task_id}", status_code=status.HTTP_200_OK, response_model=Task)
@@ -54,18 +50,12 @@ async def update_task(
     if task is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
 
-    if request.list_id is not None:
-        lst = TaskList.find_by(session, obj_id=request.list_id, user_id=current_user.id)
-        if lst is None:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="List does not exist",
-            )
-
     attrs = request.model_dump(exclude_unset=True)
-    task = task.update(session, **attrs)
+    task_list = None
+    if list_id := attrs.pop("list_id", None):
+        task_list = TaskList.find_by(session, obj_id=list_id, user_id=current_user.id)
 
-    return task
+    return task.update(session, task_list=task_list, **attrs)
 
 
 @router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -203,9 +203,13 @@ class TestCreateTask:
 
             tasks = Task.all(session, user_id=current_user.id)
 
-            assert len(tasks) == 0
-            assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
-            assert response.json() == {"detail": "List does not exist"}
+            assert len(tasks) == 1
+            task = tasks[0]
+            assert response.status_code == status.HTTP_201_CREATED
+            json_response = response.json()
+            assert json_response == task.model_dump()
+            assert json_response["title"] == "New task"
+            assert json_response["list_id"] is None
 
 
 class TestUpdateTask:
@@ -308,19 +312,23 @@ class TestUpdateTask:
         def test_another_user_list(
             self,
             authenticated_client: Tuple[TestClient, User],
+            session: Session,
             create_task,
             create_user,
             create_list,
         ):
             client, current_user = authenticated_client
             task = create_task(user_id=current_user.id, title="Task title")
+            original_list_id = task.list_id
             user = create_user(email="user2@example.com", username="user2")
             lst = create_list(user_id=user.id, title="List 1")
 
             response = client.patch(f"/tasks/{task.id}", json={"list_id": lst.id})
 
-            assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
-            assert response.json() == {"detail": "List does not exist"}
+            session.refresh(task)
+
+            assert response.status_code == status.HTTP_200_OK
+            assert task.list_id == original_list_id
 
         def test_invalid_title(self, authenticated_client: TestClient, create_task):
             client, current_user = authenticated_client
