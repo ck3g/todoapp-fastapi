@@ -61,8 +61,8 @@ def create_user_fixture(session: Session):
 
 @pytest.fixture(name="create_task")
 def create_task_fixture(session: Session):
-    def _create_task(user_id, title, completed=False):
-        task = Task(user_id=user_id, title=title, completed=completed)
+    def _create_task(user_id, title, completed=False, list_id=None):
+        task = Task(user_id=user_id, list_id=list_id, title=title, completed=completed)
         session.add(task)
         session.commit()
         session.refresh(task)

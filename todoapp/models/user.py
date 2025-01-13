@@ -23,8 +23,10 @@ class User(SQLModel, table=True):
     hashed_password: str = Field(min_length=3, max_length=255, nullable=False)
     created_at: datetime = Field(default=datetime.now(UTC), nullable=False)
 
-    tasks: list["Task"] = Relationship(back_populates="user")
-    task_lists: list["TaskList"] = Relationship(back_populates="user")
+    tasks: list["Task"] = Relationship(back_populates="user", cascade_delete=True)
+    task_lists: list["TaskList"] = Relationship(
+        back_populates="user", cascade_delete=True
+    )
 
     @classmethod
     def find_by_email(cls, session: Session, email: str) -> "User | None":
@@ -66,3 +68,8 @@ class User(SQLModel, table=True):
         session.refresh(user)
 
         return user
+
+    def destroy(self, session: Session) -> None:
+        """Delete the current record"""
+        session.delete(self)
+        session.commit()

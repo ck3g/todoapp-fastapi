@@ -21,7 +21,7 @@ class TaskList(BaseModel, table=True):
     title: str = Field(min_length=3, max_length=50, nullable=False)
 
     user: "User" = Relationship(back_populates="task_lists")
-    tasks: list["Task"] = Relationship(back_populates="task_list")
+    tasks: list["Task"] = Relationship(back_populates="task_list", cascade_delete=True)
 
     @model_serializer
     def serializer(self) -> dict[str, Any]:
