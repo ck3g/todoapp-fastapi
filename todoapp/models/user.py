@@ -1,8 +1,13 @@
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
-from sqlmodel import Field, Session, SQLModel, func, or_, select
+from sqlmodel import Field, Relationship, Session, SQLModel, func, or_, select
 
 from todoapp.security.password import hash_password
+
+if TYPE_CHECKING:
+    from todoapp.models.task import Task
+    from todoapp.models.task_list import TaskList
 
 
 class User(SQLModel, table=True):
@@ -17,6 +22,9 @@ class User(SQLModel, table=True):
     )
     hashed_password: str = Field(min_length=3, max_length=255, nullable=False)
     created_at: datetime = Field(default=datetime.now(UTC), nullable=False)
+
+    tasks: list["Task"] = Relationship(back_populates="user")
+    task_lists: list["TaskList"] = Relationship(back_populates="user")
 
     @classmethod
     def find_by_email(cls, session: Session, email: str) -> "User | None":

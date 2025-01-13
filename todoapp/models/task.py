@@ -6,6 +6,7 @@ from sqlmodel import Field, Relationship
 
 from todoapp.models.base_model import BaseModel
 from todoapp.models.task_list import TaskList
+from todoapp.models.user import User
 
 
 class Task(BaseModel, table=True):
@@ -19,6 +20,7 @@ class Task(BaseModel, table=True):
     completed: bool = Field(nullable=False, default=False)
     due_date: date = Field(nullable=True)
 
+    user: "User" = Relationship(back_populates="tasks")
     task_list: Optional["TaskList"] = Relationship(back_populates="tasks")
 
     @model_serializer
