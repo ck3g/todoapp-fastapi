@@ -17,7 +17,7 @@ class TaskList(BaseModel, table=True):
     __tablename__ = "list"
 
     id: int = Field(default=None, primary_key=True)
-    user_id: int = Field(foreign_key="user.id", nullable=False)
+    user_id: int = Field(foreign_key="user.id", nullable=False, ondelete="CASCADE")
     title: str = Field(min_length=3, max_length=50, nullable=False)
 
     user: "User" = Relationship(back_populates="task_lists")

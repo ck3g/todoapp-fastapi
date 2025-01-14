@@ -13,8 +13,10 @@ class Task(BaseModel, table=True):
     """Represents model to describe tasks"""
 
     id: int = Field(default=None, primary_key=True)
-    user_id: int = Field(foreign_key="user.id", nullable=False)
-    list_id: int | None = Field(foreign_key="list.id", nullable=True)
+    user_id: int = Field(foreign_key="user.id", nullable=False, ondelete="CASCADE")
+    list_id: int | None = Field(
+        foreign_key="list.id", nullable=True, ondelete="CASCADE"
+    )
     title: str = Field(min_length=3, max_length=255, nullable=False)
     note: str = Field(max_length=1_000, default="", nullable=False)
     completed: bool = Field(nullable=False, default=False)
