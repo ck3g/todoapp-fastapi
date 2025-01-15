@@ -25,4 +25,4 @@ class TaskList(BaseModel, table=True):
 
     @model_serializer
     def serializer(self) -> dict[str, Any]:
-        return {"id": self.id, "title": self.title}
+        return {"id": self.id, "title": self.title, "tasks": self.tasks}
