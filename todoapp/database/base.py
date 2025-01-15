@@ -1,4 +1,4 @@
-from sqlmodel import create_engine, SQLModel
+from sqlmodel import SQLModel, create_engine
 
 SQLITE_FILE_NAME = "todoapp.db"
 sqlite_url = f"sqlite:///{SQLITE_FILE_NAME}"

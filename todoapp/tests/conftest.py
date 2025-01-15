@@ -18,6 +18,7 @@ def session_fixture():
         "sqlite://",
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
+        echo=True,
     )
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:

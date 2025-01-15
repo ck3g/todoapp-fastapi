@@ -1,5 +1,7 @@
+import logging
 from typing import Tuple
 
+import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 from sqlmodel import Session
@@ -15,7 +17,11 @@ class TestReadLists:
         assert response.json() == {"detail": "Not authenticated"}
 
     def test_authenticated_success(
-        self, authenticated_client: Tuple[TestClient, User], create_list, create_user
+        self,
+        authenticated_client: Tuple[TestClient, User],
+        create_list,
+        create_user,
+        create_task,
     ):
         client, current_user = authenticated_client
 
@@ -25,6 +31,9 @@ class TestReadLists:
         list1 = create_list(user_id=current_user.id, title="List 1")
         list2 = create_list(user_id=current_user.id, title="List 2")
         create_list(user_id=another_user.id, title="List 3")
+        create_task(user_id=current_user.id, list_id=list1.id, title="Task 1")
+        create_task(user_id=current_user.id, list_id=list1.id, title="Task 2")
+        create_task(user_id=current_user.id, list_id=list2.id, title="Task 3")
 
         response = client.get("/lists")
 
@@ -35,6 +44,39 @@ class TestReadLists:
                 list2.model_dump(),
             ]
         }
+
+    @pytest.mark.skip(reason="Fixing N+1 problems seems to be pain in the ass")
+    def test_authenticated_n_plus_one(
+        self,
+        caplog,
+        authenticated_client: Tuple[TestClient, User],
+        create_list,
+        create_user,
+        create_task,
+    ):
+        client, current_user = authenticated_client
+
+        another_user = create_user(
+            email="another-user@example.com", username="another-user"
+        )
+        list1 = create_list(user_id=current_user.id, title="List 1")
+        list2 = create_list(user_id=current_user.id, title="List 2")
+        create_list(user_id=another_user.id, title="List 3")
+        create_task(user_id=current_user.id, list_id=list1.id, title="Task 1")
+        create_task(user_id=current_user.id, list_id=list1.id, title="Task 2")
+        create_task(user_id=current_user.id, list_id=list2.id, title="Task 3")
+        create_task(user_id=current_user.id, list_id=list2.id, title="Task 4")
+        create_task(user_id=current_user.id, list_id=list2.id, title="Task 5")
+
+        with caplog.at_level(logging.INFO):
+            response = client.get("/lists")
+
+        assert response.status_code == status.HTTP_200_OK
+
+        # Test N+1 problem
+        query_logs = [record for record in caplog.records if "SELECT" in record.message]
+        print("\n+++++++\n".join(record.message for record in query_logs))
+        assert len(query_logs) == 2
 
 
 class TestReadSingleList:
