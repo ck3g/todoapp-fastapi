@@ -87,16 +87,23 @@ class TestReadSingleList:
 
     class TestAuthenticated:
         def test_success(
-            self, authenticated_client: Tuple[TestClient, User], create_list
+            self,
+            authenticated_client: Tuple[TestClient, User],
+            create_list,
+            create_task,
         ):
             client, current_user = authenticated_client
 
             lst = create_list(user_id=current_user.id, title="List 1")
+            create_task(user_id=current_user.id, list_id=lst.id, title="Task 1")
+            create_task(user_id=current_user.id, list_id=lst.id, title="Task 2")
 
             response = client.get(f"/lists/{lst.id}")
 
             assert response.status_code == status.HTTP_200_OK
-            assert response.json() == lst.model_dump()
+            json_response = response.json()
+            assert json_response == lst.model_dump()
+            assert len(json_response["tasks"]) == 2
 
         def test_belongs_to_another_user(
             self,

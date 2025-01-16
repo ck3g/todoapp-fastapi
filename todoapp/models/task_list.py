@@ -1,7 +1,8 @@
 from typing import TYPE_CHECKING, Any
 
 from pydantic import model_serializer
-from sqlmodel import Field, Relationship
+from sqlalchemy.orm import selectinload
+from sqlmodel import Field, Relationship, Session, select
 
 from todoapp.models.base_model import BaseModel
 from todoapp.models.user import User
@@ -30,3 +31,12 @@ class TaskList(BaseModel, table=True):
             "title": self.title,
             "tasks": [task.serializer(include_task_list=False) for task in self.tasks],
         }
+
+    @classmethod
+    def all(cls: "TaskList", session: Session, **filters: Any) -> list["TaskList"]:
+        """Fetch all records, optionally filtering by giving parameters"""
+        stmt = select(cls).options(selectinload(cls.tasks))
+        for attr, value in filters.items():
+            stmt = stmt.where(getattr(cls, attr) == value)
+
+        return session.exec(stmt).fetchall()
