@@ -31,7 +31,6 @@ def test_task_list_serializer(create_user, create_list, create_task):
         "tasks": [
             {
                 "id": task2.id,
-                "list_id": task_list.id,
                 "title": "Task 2",
                 "note": "Note",
                 "completed": False,
@@ -40,7 +39,6 @@ def test_task_list_serializer(create_user, create_list, create_task):
             },
             {
                 "id": task3.id,
-                "list_id": task_list.id,
                 "title": "Task 3",
                 "note": "",
                 "completed": False,

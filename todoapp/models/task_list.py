@@ -25,4 +25,8 @@ class TaskList(BaseModel, table=True):
 
     @model_serializer
     def serializer(self) -> dict[str, Any]:
-        return {"id": self.id, "title": self.title, "tasks": self.tasks}
+        return {
+            "id": self.id,
+            "title": self.title,
+            "tasks": [task.serializer(include_task_list=False) for task in self.tasks],
+        }

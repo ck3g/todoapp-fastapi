@@ -147,7 +147,7 @@ class TestCreateTask:
             assert response.status_code == status.HTTP_201_CREATED
             json_response = response.json()
             assert json_response == task.model_dump()
-            assert json_response["list_id"] == lst.id
+            assert json_response["task_list"] == {"id": lst.id, "title": lst.title}
 
         def test_with_invalid_title(
             self, authenticated_client: TestClient, session: Session
@@ -209,7 +209,7 @@ class TestCreateTask:
             json_response = response.json()
             assert json_response == task.model_dump()
             assert json_response["title"] == "New task"
-            assert json_response["list_id"] is None
+            assert json_response["task_list"] is None
 
 
 class TestUpdateTask:
@@ -284,7 +284,7 @@ class TestUpdateTask:
 
             assert response.status_code == status.HTTP_200_OK
             assert json_response == updated_task.model_dump()
-            assert json_response["list_id"] == lst.id
+            assert json_response["task_list"] == {"id": lst.id, "title": lst.title}
             assert updated_task.list_id == lst.id
 
         def test_another_user_task(

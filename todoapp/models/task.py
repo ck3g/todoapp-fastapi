@@ -26,13 +26,26 @@ class Task(BaseModel, table=True):
     task_list: Optional["TaskList"] = Relationship(back_populates="tasks")
 
     @model_serializer
-    def serializer(self) -> dict[str, Any]:
-        return {
+    def serializer(self, include_task_list: bool = True) -> dict[str, Any]:
+        task_list = (
+            {
+                "id": self.task_list.id,
+                "title": self.task_list.title,
+            }
+            if self.task_list is not None
+            else None
+        )
+
+        task_dict = {
             "id": self.id,
-            "list_id": self.list_id,
             "title": self.title,
             "note": self.note,
             "completed": self.completed,
             "created_at": str(self.created_at),
             "updated_at": str(self.updated_at),
         }
+
+        if include_task_list:
+            task_dict["task_list"] = task_list
+
+        return task_dict
