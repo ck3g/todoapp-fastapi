@@ -5,6 +5,7 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import Field, Relationship, Session, select
 
 from todoapp.models.base_model import BaseModel
+from todoapp.models.group import Group
 from todoapp.models.user import User
 
 # Prevents circular imports problem
@@ -19,9 +20,13 @@ class TaskList(BaseModel, table=True):
 
     id: int = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.id", nullable=False, ondelete="CASCADE")
+    group_id: int | None = Field(
+        default=None, foreign_key="group.id", ondelete="SET NULL"
+    )
     title: str = Field(min_length=3, max_length=50, nullable=False)
 
     user: "User" = Relationship(back_populates="task_lists")
+    group: "Group" = Relationship(back_populates="task_lists")
     tasks: list["Task"] = Relationship(back_populates="task_list", cascade_delete=True)
 
     @model_serializer

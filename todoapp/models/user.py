@@ -6,6 +6,7 @@ from sqlmodel import Field, Relationship, Session, SQLModel, func, or_, select
 from todoapp.security.password import hash_password
 
 if TYPE_CHECKING:
+    from todoapp.models.group import Group
     from todoapp.models.task import Task
     from todoapp.models.task_list import TaskList
 
@@ -23,6 +24,7 @@ class User(SQLModel, table=True):
     hashed_password: str = Field(min_length=3, max_length=255, nullable=False)
     created_at: datetime = Field(default=datetime.now(UTC), nullable=False)
 
+    groups: list["Group"] = Relationship(back_populates="user")
     tasks: list["Task"] = Relationship(back_populates="user", cascade_delete=True)
     task_lists: list["TaskList"] = Relationship(
         back_populates="user", cascade_delete=True
