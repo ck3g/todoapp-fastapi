@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from todoapp.api.routers import auth, lists, tasks
+from todoapp.api.routers import auth, groups, lists, tasks
 from todoapp.database.base import create_db_and_tables
 from todoapp.models import *
 
@@ -15,6 +15,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 app.include_router(auth.router)
+app.include_router(groups.router)
 app.include_router(lists.router)
 app.include_router(tasks.router)
 
