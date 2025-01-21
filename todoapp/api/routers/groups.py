@@ -22,3 +22,15 @@ async def read_group(current_user: UserDependency, session: SessionDep, group_id
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
 
     return group
+
+
+@router.delete("/{group_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_group(
+    current_user: UserDependency, session: SessionDep, group_id: int
+):
+    group = Group.find_by(session, user_id=current_user.id, obj_id=group_id)
+
+    if group is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+
+    group.destroy(session)

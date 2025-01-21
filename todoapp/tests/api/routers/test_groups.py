@@ -2,8 +2,9 @@ from typing import Tuple
 
 from fastapi import status
 from fastapi.testclient import TestClient
+from sqlmodel import Session
 
-from todoapp.models import User
+from todoapp.models import Group, User
 
 
 class TestReadGroups:
@@ -65,6 +66,39 @@ class TestReadSingleGroup:
             client, _current_user = authenticated_client
 
             response = client.get("/groups/503")
+
+            assert response.status_code == status.HTTP_404_NOT_FOUND
+            assert response.json() == {"detail": "Not found"}
+
+
+class TestDestroyGroup:
+    def test_unauthenticated(self, client: TestClient):
+        response = client.delete("/groups/1")
+
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        assert response.json() == {"detail": "Not authenticated"}
+
+    class TestAuthenticated:
+        def test_success(
+            self,
+            authenticated_client: Tuple[TestClient, User],
+            session: Session,
+            create_group,
+        ):
+            client, current_user = authenticated_client
+            group = create_group(user_id=current_user.id, title="Group title")
+
+            response = client.delete(f"/groups/{group.id}")
+
+            assert (
+                Group.find_by(session, user_id=current_user.id, obj_id=group.id) is None
+            )
+            assert response.status_code == status.HTTP_204_NO_CONTENT
+
+        def test_not_found(self, authenticated_client: Tuple[TestClient, User]):
+            client, _current_user = authenticated_client
+
+            response = client.delete("/groups/503")
 
             assert response.status_code == status.HTTP_404_NOT_FOUND
             assert response.json() == {"detail": "Not found"}
