@@ -1,4 +1,4 @@
-from fastapi import APIRouter, status
+from fastapi import APIRouter, HTTPException, status
 
 from todoapp.api.routers.auth import UserDependency
 from todoapp.database.session import SessionDep
@@ -12,3 +12,13 @@ async def read_groups(current_user: UserDependency, session: SessionDep):
     groups = Group.all(session, user_id=current_user.id)
 
     return {"groups": groups}
+
+
+@router.get("/{group_id}", status_code=status.HTTP_200_OK)
+async def read_group(current_user: UserDependency, session: SessionDep, group_id: int):
+    group = Group.find_by(session, user_id=current_user.id, obj_id=group_id)
+
+    if group is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+
+    return group

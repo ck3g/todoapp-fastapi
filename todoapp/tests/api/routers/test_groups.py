@@ -33,3 +33,38 @@ class TestReadGroups:
                 group2.model_dump(),
             ]
         }
+
+
+class TestReadSingleGroup:
+    def test_unauthenticated(self, client: TestClient):
+        response = client.get("/groups/1")
+
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        assert response.json() == {"detail": "Not authenticated"}
+
+    class TestAuthenticated:
+        def test_success(
+            self,
+            authenticated_client: Tuple[TestClient, User],
+            create_group,
+            create_list,
+        ):
+            client, current_user = authenticated_client
+            group = create_group(user_id=current_user.id, title="Group title")
+            create_list(user_id=current_user.id, group_id=group.id, title="List 1")
+            create_list(user_id=current_user.id, group_id=group.id, title="List 2")
+
+            response = client.get(f"/groups/{group.id}")
+
+            assert response.status_code == status.HTTP_200_OK
+            json_response = response.json()
+            assert json_response == group.model_dump()
+            assert len(json_response["task_lists"]) == 2
+
+        def test_group_not_found(self, authenticated_client: Tuple[TestClient, User]):
+            client, _current_user = authenticated_client
+
+            response = client.get("/groups/503")
+
+            assert response.status_code == status.HTTP_404_NOT_FOUND
+            assert response.json() == {"detail": "Not found"}
