@@ -30,12 +30,18 @@ class TaskList(BaseModel, table=True):
     tasks: list["Task"] = Relationship(back_populates="task_list", cascade_delete=True)
 
     @model_serializer
-    def serializer(self) -> dict[str, Any]:
-        return {
+    def serializer(self, include_tasks: bool = True) -> dict[str, Any]:
+        task_list_dict = {
             "id": self.id,
             "title": self.title,
-            "tasks": [task.serializer(include_task_list=False) for task in self.tasks],
         }
+
+        if include_tasks:
+            task_list_dict["tasks"] = [
+                task.serializer(include_task_list=False) for task in self.tasks
+            ]
+
+        return task_list_dict
 
     @classmethod
     def all(cls: "TaskList", session: Session, **filters: Any) -> list["TaskList"]:

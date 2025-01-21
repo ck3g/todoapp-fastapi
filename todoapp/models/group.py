@@ -1,5 +1,6 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
+from pydantic import model_serializer
 from sqlmodel import Field, Relationship
 
 from todoapp.models.base_model import BaseModel
@@ -18,3 +19,13 @@ class Group(BaseModel, table=True):
 
     user: "User" = Relationship(back_populates="groups")
     task_lists: list["TaskList"] = Relationship(back_populates="group")
+
+    @model_serializer
+    def serializer(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "title": self.title,
+            "task_lists": [
+                tl.serializer(include_tasks=False) for tl in self.task_lists
+            ],
+        }

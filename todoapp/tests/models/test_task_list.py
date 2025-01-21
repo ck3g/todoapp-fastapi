@@ -47,3 +47,16 @@ def test_task_list_serializer(create_user, create_list, create_task):
             },
         ],
     }
+
+
+def test_task_list_serializer_excluding_tasks(create_user, create_list, create_task):
+    user = create_user(email="user@example.com", username="user")
+    task_list = create_list(user_id=user.id, title="List title")
+    create_task(user_id=user.id, title="Task 1")
+    create_task(user_id=user.id, list_id=task_list.id, title="Task 2", note="Note")
+    create_task(user_id=user.id, list_id=task_list.id, title="Task 3")
+
+    assert task_list.serializer(include_tasks=False) == {
+        "id": task_list.id,
+        "title": "List title",
+    }

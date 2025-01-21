@@ -5,7 +5,7 @@ from sqlmodel.pool import StaticPool
 
 from todoapp.database.session import get_session
 from todoapp.main import app
-from todoapp.models import Task, TaskList, User
+from todoapp.models import Group, Task, TaskList, User
 from todoapp.security.token import encode_token
 
 
@@ -80,7 +80,17 @@ def create_task_fixture(session: Session):
 
 @pytest.fixture(name="create_list")
 def create_list_fixture(session: Session):
-    def _create_list(user_id, title):
-        return TaskList.create_by(session, user_id=user_id, title=title)
+    def _create_list(user_id, title, group_id=None):
+        return TaskList.create_by(
+            session, user_id=user_id, title=title, group_id=group_id
+        )
 
     yield _create_list
+
+
+@pytest.fixture(name="create_group")
+def create_group_fixture(session: Session):
+    def _create_group(user_id, title):
+        return Group.create_by(session, user_id=user_id, title=title)
+
+    yield _create_group
