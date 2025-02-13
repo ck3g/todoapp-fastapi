@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, status
 
+from todoapp.api.models.group import GroupRequest
 from todoapp.api.routers.auth import UserDependency
 from todoapp.database.session import SessionDep
 from todoapp.models import Group
@@ -20,6 +21,15 @@ async def read_group(current_user: UserDependency, session: SessionDep, group_id
 
     if group is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+
+    return group
+
+
+@router.post("/", status_code=status.HTTP_201_CREATED)
+async def create_group(
+    current_user: UserDependency, session: SessionDep, request: GroupRequest
+):
+    group = Group.create_by(session, title=request.title, user_id=current_user.id)
 
     return group
 

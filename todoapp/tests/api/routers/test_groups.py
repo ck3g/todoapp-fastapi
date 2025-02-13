@@ -71,6 +71,50 @@ class TestReadSingleGroup:
             assert response.json() == {"detail": "Not found"}
 
 
+class TestCreateGroup:
+    def test_unauthenticated(self, client: TestClient):
+        response = client.post("/groups", json={"title": "New group"})
+
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        assert response.json() == {"detail": "Not authenticated"}
+
+    class TestAuthenticated:
+        def test_success(
+            self, authenticated_client: Tuple[TestClient, User], session: Session
+        ):
+            client, current_user = authenticated_client
+            response = client.post("/groups", json={"title": "New group"})
+
+            groups = Group.all(session, user_id=current_user.id)
+
+            assert len(groups) > 0
+            group = groups[0]
+            assert group is not None
+            assert response.status_code == status.HTTP_201_CREATED
+            json_response = response.json()
+            assert json_response["id"] == group.id
+            assert json_response["title"] == group.title
+            assert group.user_id == current_user.id
+            assert json_response == group.model_dump()
+
+        def test_invalid_title(
+            self, authenticated_client: Tuple[TestClient, User], session: Session
+        ):
+            client, current_user = authenticated_client
+            response = client.post("/groups", json={"title": "G"})
+
+            groups = Group.all(session, user_id=current_user.id)
+
+            assert len(groups) == 0
+            assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+            json_response = response.json()
+            assert json_response["detail"][0]["loc"] == ["body", "title"]
+            assert (
+                json_response["detail"][0]["msg"]
+                == "String should have at least 3 characters"
+            )
+
+
 class TestDestroyGroup:
     def test_unauthenticated(self, client: TestClient):
         response = client.delete("/groups/1")

@@ -130,7 +130,9 @@ class TestCreateList:
         assert response.json() == {"detail": "Not authenticated"}
 
     class TestAuthenticated:
-        def test_success(self, authenticated_client: TestClient, session: Session):
+        def test_success(
+            self, authenticated_client: Tuple[TestClient, User], session: Session
+        ):
             client, current_user = authenticated_client
             response = client.post("/lists", json={"title": "New list"})
 
