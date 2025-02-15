@@ -165,6 +165,57 @@ class TestCreateList:
                 == "String should have at least 3 characters"
             )
 
+        def test_with_group_id_success(
+            self,
+            authenticated_client: Tuple[TestClient, User],
+            session: Session,
+            create_group,
+        ):
+            client, current_user = authenticated_client
+            group = create_group(user_id=current_user.id, title="Group 1")
+
+            response = client.post(
+                "/lists", json={"title": "New list", "group_id": group.id}
+            )
+
+            lists = TaskList.all(session, user_id=current_user.id)
+
+            assert len(lists) == 1
+            lst = lists[0]
+            assert lst.user_id == current_user.id
+            assert lst.title == "New list"
+            assert lst.group_id == group.id
+            assert response.status_code == status.HTTP_201_CREATED
+            json_response = response.json()
+            assert json_response == lst.model_dump()
+            assert json_response["group"] == {"id": group.id, "title": group.title}
+
+        def test_with_group_id_of_another_user(
+            self,
+            authenticated_client: Tuple[TestClient, User],
+            session: Session,
+            create_user,
+            create_group,
+        ):
+            client, current_user = authenticated_client
+
+            user = create_user(email="user2@example.com", username="user2")
+            group = create_group(user_id=user.id, title="Another user group")
+
+            response = client.post(
+                "/lists", json={"title": "New list", "group_id": group.id}
+            )
+
+            lists = TaskList.all(session, user_id=current_user.id)
+
+            assert len(lists) == 1
+            lst = lists[0]
+            assert response.status_code == status.HTTP_201_CREATED
+            json_response = response.json()
+            assert json_response == lst.model_dump()
+            assert json_response["title"] == "New list"
+            assert json_response["group"] is None
+
 
 class TestUpdateList:
     def test_unauthenticated(self, client: TestClient):
@@ -222,6 +273,50 @@ class TestUpdateList:
                 json_response["detail"][0]["msg"]
                 == "String should have at least 3 characters"
             )
+
+        def test_only_group_id(
+            self,
+            authenticated_client: Tuple[TestClient, User],
+            session: Session,
+            create_list,
+            create_group,
+        ):
+            client, current_user = authenticated_client
+            lst = create_list(user_id=current_user.id, title="List title")
+            group = create_group(user_id=current_user.id, title="Group title")
+
+            response = client.patch(f"/lists/{lst.id}", json={"group_id": group.id})
+
+            updated_list = TaskList.find_by(
+                session, user_id=current_user.id, obj_id=lst.id
+            )
+            json_response = response.json()
+
+            assert response.status_code == status.HTTP_200_OK
+            assert json_response == updated_list.model_dump()
+            assert json_response["group"] == {"id": group.id, "title": group.title}
+            assert updated_list.group_id == group.id
+
+        def test_another_user_group(
+            self,
+            authenticated_client: Tuple[TestClient, User],
+            session: Session,
+            create_list,
+            create_group,
+            create_user,
+        ):
+            client, current_user = authenticated_client
+            lst = create_list(user_id=current_user.id, title="List title")
+            user = create_user(email="user2@example.com", username="user2")
+            group = create_group(user_id=user.id, title="Another user group")
+            original_group_id = lst.group_id
+
+            response = client.patch(f"/lists/{lst.id}", json={"group_id": group.id})
+
+            session.refresh(lst)
+
+            assert response.status_code == status.HTTP_200_OK
+            assert lst.group_id == original_group_id
 
 
 class TestDeleteList:

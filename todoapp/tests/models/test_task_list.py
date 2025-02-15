@@ -27,6 +27,7 @@ def test_task_list_serializer(create_user, create_list, create_task):
 
     assert task_list.model_dump() == {
         "id": task_list.id,
+        "group": None,
         "title": "List title",
         "tasks": [
             {
@@ -58,5 +59,36 @@ def test_task_list_serializer_excluding_tasks(create_user, create_list, create_t
 
     assert task_list.serializer(include_tasks=False) == {
         "id": task_list.id,
+        "group": None,
         "title": "List title",
+    }
+
+
+def test_task_list_serializer_with_group(create_user, create_list, create_group):
+    user = create_user(email="user@example.com", username="user")
+    group = create_group(user_id=user.id, title="Group title")
+    task_list = create_list(user_id=user.id, group_id=group.id, title="List title")
+
+    assert task_list.model_dump() == {
+        "id": task_list.id,
+        "group": {
+            "id": group.id,
+            "title": group.title,
+        },
+        "title": "List title",
+        "tasks": [],
+    }
+
+
+def test_task_list_serializer_with_group_excluding_group(
+    create_user, create_list, create_group
+):
+    user = create_user(email="user@example.com", username="user")
+    group = create_group(user_id=user.id, title="Group title")
+    task_list = create_list(user_id=user.id, group_id=group.id, title="List title")
+
+    assert task_list.serializer(include_group=False) == {
+        "id": task_list.id,
+        "title": "List title",
+        "tasks": [],
     }

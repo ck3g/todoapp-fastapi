@@ -45,3 +45,14 @@ def test_group_serializer(create_user, create_list, create_group):
         "title": "Group 2",
         "task_lists": [],
     }
+
+
+def test_group_serializer_without_task_lists(create_user, create_list, create_group):
+    user = create_user(email="user@example.com", username="user")
+    group = create_group(user_id=user.id, title="Group 1")
+    create_list(user_id=user.id, group_id=group.id, title="List 1")
+
+    assert group.serializer(include_task_lists=False) == {
+        "id": group.id,
+        "title": "Group 1",
+    }

@@ -21,11 +21,16 @@ class Group(BaseModel, table=True):
     task_lists: list["TaskList"] = Relationship(back_populates="group")
 
     @model_serializer
-    def serializer(self) -> dict[str, Any]:
-        return {
+    def serializer(self, include_task_lists: bool = True) -> dict[str, Any]:
+        group_dict = {
             "id": self.id,
             "title": self.title,
-            "task_lists": [
-                tl.serializer(include_tasks=False) for tl in self.task_lists
-            ],
         }
+
+        if include_task_lists:
+            group_dict["task_lists"] = [
+                tl.serializer(include_tasks=False, include_group=False)
+                for tl in self.task_lists
+            ]
+
+        return group_dict

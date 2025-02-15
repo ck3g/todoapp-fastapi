@@ -1,9 +1,9 @@
 from fastapi import APIRouter, HTTPException, status
 
-from todoapp.api.models.list import ListRequest
+from todoapp.api.models.list import CreateListRequest, UpdateListRequest
 from todoapp.api.routers.auth import UserDependency
 from todoapp.database.session import SessionDep
-from todoapp.models import TaskList
+from todoapp.models import TaskList, Group
 
 router = APIRouter(prefix="/lists", tags=["lists"])
 
@@ -27,18 +27,21 @@ async def read_list(current_user: UserDependency, session: SessionDep, list_id: 
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
 async def create_list(
-    current_user: UserDependency, session: SessionDep, request: ListRequest
+    current_user: UserDependency, session: SessionDep, request: CreateListRequest
 ):
-    lst = TaskList.create_by(session, title=request.title, user_id=current_user.id)
+    attrs = request.model_dump(exclude_unset=True)
+    group = None
+    if group_id := attrs.pop("group_id", None):
+        group = Group.find_by(session, user_id=current_user.id, obj_id=group_id)
 
-    return lst
+    return TaskList.create_by(session, user_id=current_user.id, group=group, **attrs)
 
 
 @router.patch("/{list_id}", status_code=status.HTTP_200_OK)
 async def update_list(
     current_user: UserDependency,
     session: SessionDep,
-    request: ListRequest,
+    request: UpdateListRequest,
     list_id: int,
 ):
     lst = TaskList.find_by(session, user_id=current_user.id, obj_id=list_id)
@@ -46,9 +49,11 @@ async def update_list(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
 
     attrs = request.model_dump(exclude_unset=True)
-    lst = lst.update(session, **attrs)
+    group = None
+    if group_id := attrs.pop("group_id", None):
+        group = Group.find_by(session, obj_id=group_id, user_id=current_user.id)
 
-    return lst
+    return lst.update(session, group=group, **attrs)
 
 
 @router.delete("/{list_id}", status_code=status.HTTP_204_NO_CONTENT)

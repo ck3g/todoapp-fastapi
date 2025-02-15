@@ -30,7 +30,9 @@ class TaskList(BaseModel, table=True):
     tasks: list["Task"] = Relationship(back_populates="task_list", cascade_delete=True)
 
     @model_serializer
-    def serializer(self, include_tasks: bool = True) -> dict[str, Any]:
+    def serializer(
+        self, include_tasks: bool = True, include_group: bool = True
+    ) -> dict[str, Any]:
         task_list_dict = {
             "id": self.id,
             "title": self.title,
@@ -40,6 +42,13 @@ class TaskList(BaseModel, table=True):
             task_list_dict["tasks"] = [
                 task.serializer(include_task_list=False) for task in self.tasks
             ]
+
+        if include_group:
+            task_list_dict["group"] = (
+                self.group.serializer(include_task_lists=False)
+                if self.group is not None
+                else None
+            )
 
         return task_list_dict
 
