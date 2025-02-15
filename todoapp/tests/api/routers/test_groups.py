@@ -115,6 +115,66 @@ class TestCreateGroup:
             )
 
 
+class TestUpdateGroup:
+    def test_unauthenticated(self, client: TestClient):
+        response = client.patch("/groups/1", json={"title": "Updated title"})
+
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    class TestAuthenticated:
+        def test_success(
+            self, authenticated_client: Tuple[TestClient, User], create_group
+        ):
+            client, current_user = authenticated_client
+
+            group = create_group(user_id=current_user.id, title="Group title")
+
+            response = client.patch(
+                f"/groups/{group.id}", json={"title": "Updated title"}
+            )
+
+            assert group.title == "Updated title"
+            assert response.status_code == status.HTTP_200_OK
+            json_response = response.json()
+            assert json_response == group.model_dump()
+            assert json_response["title"] == "Updated title"
+
+        def test_belongs_to_another_user(
+            self,
+            authenticated_client: Tuple[TestClient, User],
+            create_group,
+            create_user,
+        ):
+            client, _ = authenticated_client
+            user = create_user(email="user2@example.com", username="user2")
+            group = create_group(user_id=user.id, title="Group title")
+
+            response = client.patch(
+                f"/groups/{group.id}", json={"title": "Updated title"}
+            )
+
+            assert group.title == "Group title"
+            assert response.status_code == status.HTTP_404_NOT_FOUND
+            assert response.json() == {"detail": "Not found"}
+
+        def test_invalid_title(
+            self, authenticated_client: Tuple[TestClient, User], create_group
+        ):
+            client, current_user = authenticated_client
+            group = create_group(user_id=current_user.id, title="Group title")
+
+            response = client.patch(f"/groups/{group.id}", json={"title": "G"})
+
+            assert group.title == "Group title"
+            assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+            json_response = response.json()
+            assert json_response["detail"][0]["loc"] == ["body", "title"]
+            assert (
+                json_response["detail"][0]["msg"]
+                == "String should have at least 3 characters"
+            )
+
+
 class TestDestroyGroup:
     def test_unauthenticated(self, client: TestClient):
         response = client.delete("/groups/1")
